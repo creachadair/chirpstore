@@ -3,9 +3,11 @@ package chirpstore_test
 import (
 	"context"
 	"crypto/sha1"
+	"flag"
 	"fmt"
 	"testing"
 
+	"github.com/creachadair/chirp"
 	"github.com/creachadair/chirp/peers"
 	"github.com/creachadair/chirpstore"
 	"github.com/creachadair/ffs/blob"
@@ -17,12 +19,18 @@ import (
 var _ blob.Store = chirpstore.Store{}
 var _ blob.CAS = chirpstore.CAS{}
 
+var doDebug = flag.Bool("debug", false, "Enable debug logging")
+
 func TestStore(t *testing.T) {
 	mem := memstore.New()
 	svc := chirpstore.NewService(mem, nil)
 
 	loc := peers.NewLocal()
 	svc.Register(loc.A)
+	if *doDebug {
+		loc.A.LogPacket(func(pkt *chirp.Packet) { t.Logf("A receive: %v", pkt) })
+		loc.B.LogPacket(func(pkt *chirp.Packet) { t.Logf("B receive: %v", pkt) })
+	}
 
 	t.Run("Store", func(t *testing.T) {
 		rs := chirpstore.NewStore(loc.B, nil)
