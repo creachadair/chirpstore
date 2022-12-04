@@ -10,6 +10,7 @@ import (
 
 // Constants defining the method IDs for the store service.
 const (
+	mStatus = 99
 	mGet    = 100
 	mPut    = 101
 	mDelete = 102
@@ -39,6 +40,7 @@ type ServiceOpts struct{}
 
 // Register adds method handlers to p for each of the applicable methods of s.
 func (s *Service) Register(p *chirp.Peer) {
+	p.Handle(mStatus, s.Status)
 	p.Handle(mGet, s.Get)
 	p.Handle(mPut, s.Put)
 	p.Handle(mDelete, s.Delete)
@@ -49,6 +51,12 @@ func (s *Service) Register(p *chirp.Peer) {
 		p.Handle(mCASPut, s.CASPut)
 		p.Handle(mCASKey, s.CASKey)
 	}
+}
+
+// Status returns a JSON blob of server metrics.
+func (s *Service) Status(ctx context.Context, req *chirp.Request) ([]byte, error) {
+	mx := chirp.ContextPeer(ctx).Metrics()
+	return []byte(mx.String()), nil
 }
 
 // Get handles the corresponding method of blob.Store.

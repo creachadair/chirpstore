@@ -98,6 +98,15 @@ func (s Store) Len(ctx context.Context) (int64, error) {
 	return int64(binary.BigEndian.Uint64(rsp.Data)), nil
 }
 
+// Status calls the status method of the store service.
+func (s Store) Status(ctx context.Context) ([]byte, error) {
+	rsp, err := s.peer.Call(ctx, mStatus, nil)
+	if err != nil {
+		return nil, err
+	}
+	return rsp.Data, nil
+}
+
 // CAS implements the blob.CAS interface by calling a Chirp v0 peer.
 type CAS struct {
 	Store
