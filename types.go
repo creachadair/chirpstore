@@ -21,7 +21,7 @@ type PutRequest struct {
 	Replace bool
 
 	// Encoding:
-	// [1] replace [3] keylen=n [n] key [rest] data
+	// [1] replace [2] keylen=n [n] key [rest] data
 }
 
 // Encode converts p into a binary string for request data.
@@ -85,7 +85,7 @@ type ListResponse struct {
 	Keys [][]byte
 	Next []byte
 
-	// [3] nlen=n [n] next |: [3] klen=k [k] key :|
+	// [2] nlen=n [n] next |: [2] klen=k [k] key :|
 }
 
 // Encode converts r into a binary string for response data.
