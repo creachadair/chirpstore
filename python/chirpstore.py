@@ -153,7 +153,6 @@ class Conn(object):
 
     def close(self):
         if self._socket is not None:
-            self._socket.shutdown(1)
             self._socket.close()
             self._socket = None
 
