@@ -181,7 +181,7 @@ class ListResponse(object):
             i += size
 
     def has_more(self):
-        return self.next is not None
+        return bool(self.next)
 
 
 class Key(bytes):
