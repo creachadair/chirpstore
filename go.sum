@@ -1,7 +1,7 @@
 github.com/creachadair/chirp v0.0.0-20221206073639-8ba6bb1ade78 h1:XkvsIQE/s2JPukth7BlBw8Pe5V0gub0E8E79TVa6GeA=
 github.com/creachadair/chirp v0.0.0-20221206073639-8ba6bb1ade78/go.mod h1:uwOEvnwoziZupZjbQHhwiI6zCYdpUec5bp5z4YzSdRs=
-github.com/creachadair/ffs v0.0.0-20221212045819-dff23ca2114e h1:6MSbmD8MM4GF18f+rMZiMg9XUdBzYBsc3RvLaVdBMC8=
-github.com/creachadair/ffs v0.0.0-20221212045819-dff23ca2114e/go.mod h1:5BKEagl/PdY/mdlpoIlwOB+/hWgXkJ69sfgLVpvNZSs=
+github.com/creachadair/ffs v0.0.0-20221213012247-bb01e7bfcaa7 h1:aJ6c8evvP2bl1qzw+SMA/GDoP/3QK6mOyzaW2OkGgRM=
+github.com/creachadair/ffs v0.0.0-20221213012247-bb01e7bfcaa7/go.mod h1:ztyXfdFhm+MntyOjgZxR/Vc4wXSNfOpxLYmjofVIiPQ=
 github.com/creachadair/taskgroup v0.3.2 h1:zlfutDS+5XG40AOxcHDSThxKzns8Tnr9jnr6VqkYlkM=
 github.com/creachadair/taskgroup v0.3.2/go.mod h1:wieWwecHVzsidg2CsUnFinW1faVN4+kq+TDlRJQ0Wbk=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
