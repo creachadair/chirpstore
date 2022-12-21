@@ -72,7 +72,7 @@ class Client(object):
             raise
 
     # TODO: put, delete, casput, caskey
-        
+
     def __read_packet(self):
         hdr = self._conn.read(8)
         sig, ptype, plen = struct.unpack('>3sbI', hdr)
@@ -87,11 +87,11 @@ class Client(object):
     def __call(self, method_id, payload=b''):
         req_id, request = self.__request(method_id, payload)
         self._conn.write(self.__packet(self.PKT_REQUEST, request))
-        
+
         ptype, result = self.__read_packet()
         if ptype != self.PKT_RESPONSE:
             raise ProtocolError(f'unexpected packet type {ptype}')
-        
+
         rsp_id, code = struct.unpack('>Ib', result[:5])
         if rsp_id != req_id:
             raise ProtocolError(f'unexpected response id, got {rsp_id}, want {req_id}')
@@ -99,31 +99,39 @@ class Client(object):
             raise ServiceError(code, result[5:])
         return result[5:]
 
+    fmt_req = struct.Struct('>II')
+
     def __request(self, method_id, payload=b''):
         self._reqid += 1
-        return self._reqid, struct.pack('>II', self._reqid, method_id)+payload
+        return self._reqid, self.fmt_req.pack(self._reqid, method_id)+payload
+
+    fmt_pkt = struct.Struct('>3sbI')
 
     def __packet(self, ptype, payload):
-        return struct.pack('>3sbI', b'CP\x00', ptype, len(payload))+payload
+        return self.fmt_pkt.pack(b'CP\x00', ptype, len(payload))+payload
 
     def __del__(self):
         self._conn.close()
 
 
 class ServiceError(Exception):
+    fmt = struct.Struct('>H')
+
     def __init__(self, etype, data):
         self.etype = etype
         self.payload = data
         self.code, self.message, self.aux = 0, b'', b''
 
         if len(data) != 0:
-            self.code = struct.unpack('>H', data[:2])[0]
+            self.code = self.fmt.unpack(data[:self.fmt.size])[0]
             self.message, self.aux = b'', b''
 
-            if len(data) > 2:
-                n = struct.unpack('>H', data[2:4])[0]
-                self.message = data[4:4+n]
-                self.aux = data[4+n:]
+            if len(data) > self.fmt.size:
+                end = self.fmt.size*2
+                n = self.fmt.unpack(data[self.fmt.size:end])[0]
+                self.message = data[:end+n]
+                self.aux = data[end+n:]
+
 
 class ProtocolError(Exception):
     pass
@@ -157,14 +165,20 @@ class Conn(object):
             self._socket = None
 
 class PutRequest(object):
+    fmt = struct.Struct('>bH')
+
     def __init__(self, key, data, replace=False):
-        self.payload = struct.pack('>bH', int(replace), len(key)) + key + data
+        self.payload = self.fmt.Pack(int(replace), len(key)) + key + data
 
 class ListRequest(object):
+    fmt = struct.Struct('>I')
+
     def __init__(self, count, start=b''):
-        self.payload = struct.pack('>I', count) + start
+        self.payload = self.fmt.pack(count) + start
 
 class ListResponse(object):
+    fmt = struct.Struct('>H')
+
     def __init__(self, data):
         self.payload = data
         self.keys = []
@@ -172,8 +186,8 @@ class ListResponse(object):
 
         i = 0
         while i < len(data):
-            size = struct.unpack('>H', data[i:i+2])[0]
-            i += 2
+            size = self.fmt.unpack(data[i:i+self.fmt.size])[0]
+            i += self.fmt.size
             if self.next is None:
                 self.next = Key(data[i:i+size])
             else:
