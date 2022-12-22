@@ -123,7 +123,11 @@ func (r *ListResponse) UnmarshalBinary(data []byte) error {
 
 func filterErr(err error) error {
 	if blob.IsKeyNotFound(err) {
-		return &chirp.ErrorData{Code: codeKeyNotFound, Message: "key not found"}
+		ed := &chirp.ErrorData{Code: codeKeyNotFound, Message: "key not found"}
+		if e, ok := err.(*blob.KeyError); ok {
+			ed.Data = []byte(e.Key)
+		}
+		return ed
 	} else if blob.IsKeyExists(err) {
 		return &chirp.ErrorData{Code: codeKeyExists, Message: "key exists"}
 	}
@@ -135,6 +139,9 @@ func unfilterErr(err error) error {
 		if ce.Code == codeKeyExists {
 			return blob.ErrKeyExists
 		} else if ce.Code == codeKeyNotFound {
+			if len(ce.Data) != 0 {
+				return blob.KeyNotFound(string(ce.Data))
+			}
 			return blob.ErrKeyNotFound
 		}
 		// fall through
