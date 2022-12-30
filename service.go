@@ -101,7 +101,7 @@ func (s *Service) List(ctx context.Context, req *chirp.Request) ([]byte, error) 
 
 	limit := lreq.Count
 	if limit <= 0 {
-		limit = 64
+		limit = 256
 	}
 
 	var lrsp ListResponse
