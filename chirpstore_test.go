@@ -28,8 +28,8 @@ func TestStore(t *testing.T) {
 	loc := peers.NewLocal()
 	svc.Register(loc.A)
 	if *doDebug {
-		loc.A.LogPacket(func(pkt *chirp.Packet) { t.Logf("A receive: %v", pkt) })
-		loc.B.LogPacket(func(pkt *chirp.Packet) { t.Logf("B receive: %v", pkt) })
+		loc.A.LogPackets(func(pkt chirp.PacketInfo) { t.Logf("A: %v", pkt) })
+		loc.B.LogPackets(func(pkt chirp.PacketInfo) { t.Logf("B: %v", pkt) })
 	}
 
 	t.Run("Store", func(t *testing.T) {
