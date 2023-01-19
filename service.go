@@ -137,7 +137,7 @@ func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error
 	return []byte(key), err
 }
 
-// CASKey computes teh hash key for the specified data, if the service has a CAS.
+// CASKey computes the hash key for the specified data, if the service has a CAS.
 // It reports an error if the underlying store is not a blob.CAS.
 func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	if s.cas == nil {
