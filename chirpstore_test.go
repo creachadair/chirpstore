@@ -17,13 +17,17 @@ import (
 
 // Interface satisfaction checks.
 var _ blob.Store = chirpstore.Store{}
+var _ blob.Closer = chirpstore.Store{}
 var _ blob.CAS = chirpstore.CAS{}
+var _ blob.Closer = chirpstore.CAS{}
 
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
 
-func TestStore(t *testing.T) {
-	mem := memstore.New()
-	svc := chirpstore.NewService(mem, nil)
+func newTestService(t *testing.T, bs blob.Store) *chirp.Peer {
+	if bs == nil {
+		bs = memstore.New()
+	}
+	svc := chirpstore.NewService(bs, nil)
 
 	loc := peers.NewLocal()
 	svc.Register(loc.A)
@@ -31,35 +35,38 @@ func TestStore(t *testing.T) {
 		loc.A.LogPackets(func(pkt chirp.PacketInfo) { t.Logf("A: %v", pkt) })
 		loc.B.LogPackets(func(pkt chirp.PacketInfo) { t.Logf("B: %v", pkt) })
 	}
+	t.Cleanup(func() {
+		if err := loc.Stop(); err != nil {
+			t.Errorf("Server close: %v", err)
+		}
+	})
+	return loc.B
+}
 
+func TestStore(t *testing.T) {
 	t.Run("Store", func(t *testing.T) {
-		rs := chirpstore.NewStore(loc.B, nil)
+		peer := newTestService(t, nil)
+		rs := chirpstore.NewStore(peer, nil)
 		storetest.Run(t, rs)
 	})
 	t.Run("CAS", func(t *testing.T) {
-		rs := chirpstore.NewCAS(loc.B, nil)
+		peer := newTestService(t, nil)
+		rs := chirpstore.NewCAS(peer, nil)
 		storetest.Run(t, rs)
 	})
-
-	if err := loc.Stop(); err != nil {
-		t.Fatalf("Server close: %v", err)
-	}
 }
 
 func TestCAS(t *testing.T) {
 	mem := blob.NewCAS(memstore.New(), sha1.New)
-	svc := chirpstore.NewService(mem, nil)
-
-	loc := peers.NewLocal()
-	defer loc.Stop()
-	svc.Register(loc.A)
+	peer := newTestService(t, mem)
 
 	// echo "abcde" | shasum -a 1
 	const input = "abcde\n"
 	const want = "ec11312386ad561674f724b8cca7cf1796e26d1d"
 
 	ctx := context.Background()
-	rs := chirpstore.NewCAS(loc.B, nil)
+	rs := chirpstore.NewCAS(peer, nil)
+
 	t.Run("CASPut", func(t *testing.T) {
 		key, err := rs.CASPut(ctx, []byte(input))
 		if err != nil {
@@ -68,6 +75,7 @@ func TestCAS(t *testing.T) {
 			t.Errorf("PutCAS(%q): got key %q, want %q", input, got, want)
 		}
 	})
+
 	t.Run("CASKey", func(t *testing.T) {
 		key, err := rs.CASKey(ctx, []byte(input))
 		if err != nil {
@@ -76,6 +84,7 @@ func TestCAS(t *testing.T) {
 			t.Errorf("CASKey(%q): got key %q, want %q", input, got, want)
 		}
 	})
+
 	t.Run("Len", func(t *testing.T) {
 		n, err := rs.Len(ctx)
 		if err != nil {

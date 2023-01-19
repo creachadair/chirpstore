@@ -18,6 +18,9 @@ func NewStore(peer *chirp.Peer, opts *StoreOpts) Store { return Store{peer: peer
 // StoreOpts provide optional settings for a Store peer.
 type StoreOpts struct{}
 
+// Close implements the blob.Closer interface.
+func (s Store) Close(_ context.Context) error { return s.peer.Stop() }
+
 // Get implements a method of blob.Store.
 func (s Store) Get(ctx context.Context, key string) ([]byte, error) {
 	rsp, err := s.peer.Call(ctx, mGet, []byte(key))
