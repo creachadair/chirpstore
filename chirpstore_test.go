@@ -17,9 +17,7 @@ import (
 
 // Interface satisfaction checks.
 var _ blob.Store = chirpstore.Store{}
-var _ blob.Closer = chirpstore.Store{}
 var _ blob.CAS = chirpstore.CAS{}
-var _ blob.Closer = chirpstore.CAS{}
 
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
 
