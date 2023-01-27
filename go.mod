@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/creachadair/chirp v0.0.0-20230118205743-51c55d6664b2
-	github.com/creachadair/ffs v0.0.0-20230120050709-78d85727da59
+	github.com/creachadair/ffs v0.0.0-20230123205934-71e1e411e7bd
 	github.com/google/go-cmp v0.5.9
 )
 
