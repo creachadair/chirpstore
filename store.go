@@ -46,17 +46,6 @@ func (s Store) Delete(ctx context.Context, key string) error {
 	return unfilterErr(err)
 }
 
-// Size implements a method of blob.Store.
-func (s Store) Size(ctx context.Context, key string) (int64, error) {
-	rsp, err := s.peer.Call(ctx, mSize, []byte(key))
-	if err != nil {
-		return 0, unfilterErr(err)
-	} else if len(rsp.Data) != 8 {
-		return 0, errors.New("size: invalid response format")
-	}
-	return int64(binary.BigEndian.Uint64(rsp.Data)), nil
-}
-
 // List implements a method of blob.Store.
 func (s Store) List(ctx context.Context, start string, f func(string) error) error {
 	next := start

@@ -14,7 +14,7 @@ const (
 	mGet    = 100
 	mPut    = 101
 	mDelete = 102
-	mSize   = 103
+	// 103 was Size, now unused
 	mList   = 104
 	mLen    = 105
 	mCASPut = 201
@@ -44,7 +44,6 @@ func (s *Service) Register(p *chirp.Peer) {
 	p.Handle(mGet, s.Get)
 	p.Handle(mPut, s.Put)
 	p.Handle(mDelete, s.Delete)
-	p.Handle(mSize, s.Size)
 	p.Handle(mList, s.List)
 	p.Handle(mLen, s.Len)
 	if s.cas != nil {
@@ -81,15 +80,6 @@ func (s *Service) Put(ctx context.Context, req *chirp.Request) ([]byte, error) {
 // Delete handles the corresponding method of blob.Store.
 func (s *Service) Delete(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	return nil, filterErr(s.st.Delete(ctx, string(req.Data)))
-}
-
-// Size handles the corresponding method of blob.Store.
-func (s *Service) Size(ctx context.Context, req *chirp.Request) ([]byte, error) {
-	size, err := s.st.Size(ctx, string(req.Data))
-	if err != nil {
-		return nil, filterErr(err)
-	}
-	return packInt64(size), nil
 }
 
 // List handles the corresponding method of blob.Store.
