@@ -121,6 +121,44 @@ func (r *ListResponse) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
+// CASPutRequest is the encoding wrapper for the CASPut method.
+type CASPutRequest struct {
+	Prefix, Suffix []byte
+	Data           []byte
+
+	// Encoding:
+	// [2] plen=n [n] prefix [2] slen=n [n] suffix [rest] data
+}
+
+// Encode converts p into a binary string for request data.
+func (p CASPutRequest) Encode() []byte {
+	buf := make([]byte, 4+len(p.Prefix)+len(p.Suffix)+len(p.Data))
+	s := putBytes(buf, p.Prefix, 0)
+	d := putBytes(buf, p.Suffix, s)
+	copy(buf[d:], p.Data)
+	return buf
+}
+
+// UnmarshalBinary decodes data from binary format and replaces the contents of
+// p. It implements encoding.BinaryMarshaler.
+func (p *CASPutRequest) UnmarshalBinary(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("invalid CAS put request (%d bytes)", len(data))
+	}
+	s, pfx, err := getBytes(data, 0)
+	if err != nil {
+		return fmt.Errorf("invalid CAS put request: %w", err)
+	}
+	d, sfx, err := getBytes(data, s)
+	if err != nil {
+		return fmt.Errorf("invalid CAS put request: %w", err)
+	}
+	p.Prefix = pfx
+	p.Suffix = sfx
+	p.Data = data[d:]
+	return nil
+}
+
 func filterErr(err error) error {
 	if blob.IsKeyNotFound(err) {
 		ed := &chirp.ErrorData{Code: codeKeyNotFound, Message: "key not found"}

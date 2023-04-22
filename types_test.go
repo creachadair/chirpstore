@@ -45,4 +45,11 @@ func TestTypes(t *testing.T) {
 			Keys: [][]byte{[]byte("crossroads"), []byte("spoonful"), []byte("train time")},
 		})
 	})
+	t.Run("CASPutRequest", func(t *testing.T) {
+		testRoundTrip(t, new(chirpstore.CASPutRequest), &chirpstore.CASPutRequest{
+			Prefix: []byte("this goes first"),
+			Suffix: []byte("this goes last"),
+			Data:   []byte("all the data that are fit to print"),
+		})
+	})
 }

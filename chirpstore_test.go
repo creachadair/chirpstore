@@ -66,7 +66,7 @@ func TestCAS(t *testing.T) {
 	rs := chirpstore.NewCAS(peer, nil)
 
 	t.Run("CASPut", func(t *testing.T) {
-		key, err := rs.CASPut(ctx, []byte(input))
+		key, err := rs.CASPut(ctx, blob.CASPutOptions{Data: []byte(input)})
 		if err != nil {
 			t.Errorf("PutCAS(%q) failed: %v", input, err)
 		} else if got := fmt.Sprintf("%x", key); got != want {
@@ -75,7 +75,7 @@ func TestCAS(t *testing.T) {
 	})
 
 	t.Run("CASKey", func(t *testing.T) {
-		key, err := rs.CASKey(ctx, []byte(input))
+		key, err := rs.CASKey(ctx, blob.CASPutOptions{Data: []byte(input)})
 		if err != nil {
 			t.Errorf("CASKey(%q) failed: %v", input, err)
 		} else if got := fmt.Sprintf("%x", key); got != want {

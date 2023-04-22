@@ -123,7 +123,15 @@ func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error
 	if s.cas == nil {
 		return nil, errors.New("store does not implement content addressing")
 	}
-	key, err := s.cas.CASPut(ctx, req.Data)
+	var preq CASPutRequest
+	if err := preq.UnmarshalBinary(req.Data); err != nil {
+		return nil, err
+	}
+	key, err := s.cas.CASPut(ctx, blob.CASPutOptions{
+		Data:   preq.Data,
+		Prefix: string(preq.Prefix),
+		Suffix: string(preq.Suffix),
+	})
 	return []byte(key), err
 }
 
@@ -133,6 +141,14 @@ func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error
 	if s.cas == nil {
 		return nil, errors.New("store does not implement content addressing")
 	}
-	key, err := s.cas.CASKey(ctx, req.Data)
+	var preq CASPutRequest
+	if err := preq.UnmarshalBinary(req.Data); err != nil {
+		return nil, err
+	}
+	key, err := s.cas.CASKey(ctx, blob.CASPutOptions{
+		Data:   preq.Data,
+		Prefix: string(preq.Prefix),
+		Suffix: string(preq.Suffix),
+	})
 	return []byte(key), err
 }

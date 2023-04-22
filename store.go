@@ -110,8 +110,12 @@ func NewCAS(peer *chirp.Peer, opts *StoreOpts) CAS {
 }
 
 // CASPut implements part of the blob.CAS type.
-func (c CAS) CASPut(ctx context.Context, data []byte) (string, error) {
-	rsp, err := c.peer.Call(ctx, mCASPut, data)
+func (c CAS) CASPut(ctx context.Context, opts blob.CASPutOptions) (string, error) {
+	rsp, err := c.peer.Call(ctx, mCASPut, CASPutRequest{
+		Data:   opts.Data,
+		Prefix: []byte(opts.Prefix),
+		Suffix: []byte(opts.Suffix),
+	}.Encode())
 	if err != nil {
 		return "", err
 	}
@@ -119,8 +123,12 @@ func (c CAS) CASPut(ctx context.Context, data []byte) (string, error) {
 }
 
 // CASKey implements part of the blob.CAS type.
-func (c CAS) CASKey(ctx context.Context, data []byte) (string, error) {
-	rsp, err := c.peer.Call(ctx, mCASKey, data)
+func (c CAS) CASKey(ctx context.Context, opts blob.CASPutOptions) (string, error) {
+	rsp, err := c.peer.Call(ctx, mCASKey, CASPutRequest{
+		Data:   opts.Data,
+		Prefix: []byte(opts.Prefix),
+		Suffix: []byte(opts.Suffix),
+	}.Encode())
 	if err != nil {
 		return "", err
 	}
