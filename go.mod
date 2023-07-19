@@ -9,6 +9,6 @@ require (
 )
 
 require (
-	github.com/creachadair/mds v0.0.1 // indirect
+	github.com/creachadair/mds v0.1.0 // indirect
 	github.com/creachadair/taskgroup v0.6.0 // indirect
 )
