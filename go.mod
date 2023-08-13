@@ -3,7 +3,7 @@ module github.com/creachadair/chirpstore
 go 1.20
 
 require (
-	github.com/creachadair/chirp v0.0.0-20230622232502-aa9519635210
+	github.com/creachadair/chirp v0.0.0-20230813165328-047b0a2be63d
 	github.com/creachadair/ffs v0.0.2
 	github.com/google/go-cmp v0.5.9
 )
