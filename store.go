@@ -56,7 +56,7 @@ func (s Store) List(ctx context.Context, start string, f func(string) error) err
 			Start: []byte(next),
 		}.Encode()); err != nil {
 			return err
-		} else if err := rsp.UnmarshalBinary(lres.Data); err != nil {
+		} else if err := rsp.Decode(lres.Data); err != nil {
 			return err
 		}
 		if len(rsp.Keys) == 0 {

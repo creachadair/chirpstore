@@ -36,9 +36,8 @@ func (p PutRequest) Encode() []byte {
 	return buf
 }
 
-// UnmarshalBinary data from binary format and replaces the contents of p.
-// It implements encoding.BinaryMarshaler.
-func (p *PutRequest) UnmarshalBinary(data []byte) error {
+// Decode data from binary format and replace the contents of p.
+func (p *PutRequest) Decode(data []byte) error {
 	if len(data) < 3 {
 		return fmt.Errorf("invalid put request (%d bytes)", len(data))
 	}
@@ -69,9 +68,8 @@ func (r ListRequest) Encode() []byte {
 	return buf
 }
 
-// UnmarshalBinary data from binary format and replaces the contents of r.
-// It implements encoding.BinaryMarshaler.
-func (r *ListRequest) UnmarshalBinary(data []byte) error {
+// Decode data from binary format and replace the contents of r.
+func (r *ListRequest) Decode(data []byte) error {
 	if len(data) < 4 {
 		return fmt.Errorf("invalid list request (%d bytes)", len(data))
 	}
@@ -102,9 +100,8 @@ func (r ListResponse) Encode() []byte {
 	return buf
 }
 
-// UnmarshalBinary data from binary format and replaces the contents of r.
-// It implements encoding.BinaryMarshaler.
-func (r *ListResponse) UnmarshalBinary(data []byte) error {
+// Decode data from binary format and replaces the contents of r.
+func (r *ListResponse) Decode(data []byte) error {
 	pos, next, err := getBytes(data, 0)
 	if err != nil {
 		return fmt.Errorf("invalid list response: %w", err)
@@ -139,9 +136,8 @@ func (p CASPutRequest) Encode() []byte {
 	return buf
 }
 
-// UnmarshalBinary decodes data from binary format and replaces the contents of
-// p. It implements encoding.BinaryMarshaler.
-func (p *CASPutRequest) UnmarshalBinary(data []byte) error {
+// Decode decodes data from binary format and replace the contents of
+func (p *CASPutRequest) Decode(data []byte) error {
 	if len(data) < 4 {
 		return fmt.Errorf("invalid CAS put request (%d bytes)", len(data))
 	}

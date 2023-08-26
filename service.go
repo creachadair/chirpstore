@@ -67,7 +67,7 @@ func (s *Service) Get(ctx context.Context, req *chirp.Request) ([]byte, error) {
 // Put handles the corresponding method of blob.Store.
 func (s *Service) Put(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var preq PutRequest
-	if err := preq.UnmarshalBinary(req.Data); err != nil {
+	if err := preq.Decode(req.Data); err != nil {
 		return nil, err
 	}
 	return nil, filterErr(s.st.Put(ctx, blob.PutOptions{
@@ -85,7 +85,7 @@ func (s *Service) Delete(ctx context.Context, req *chirp.Request) ([]byte, error
 // List handles the corresponding method of blob.Store.
 func (s *Service) List(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var lreq ListRequest
-	if err := lreq.UnmarshalBinary(req.Data); err != nil {
+	if err := lreq.Decode(req.Data); err != nil {
 		return nil, err
 	}
 
@@ -124,7 +124,7 @@ func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error
 		return nil, errors.New("store does not implement content addressing")
 	}
 	var preq CASPutRequest
-	if err := preq.UnmarshalBinary(req.Data); err != nil {
+	if err := preq.Decode(req.Data); err != nil {
 		return nil, err
 	}
 	key, err := s.cas.CASPut(ctx, blob.CASPutOptions{
@@ -142,7 +142,7 @@ func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error
 		return nil, errors.New("store does not implement content addressing")
 	}
 	var preq CASPutRequest
-	if err := preq.UnmarshalBinary(req.Data); err != nil {
+	if err := preq.Decode(req.Data); err != nil {
 		return nil, err
 	}
 	key, err := s.cas.CASKey(ctx, blob.CASPutOptions{

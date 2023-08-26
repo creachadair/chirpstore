@@ -9,7 +9,7 @@ import (
 
 type roundTripper interface {
 	Encode() []byte
-	UnmarshalBinary([]byte) error
+	Decode([]byte) error
 }
 
 func testRoundTrip(t *testing.T, out, in roundTripper) {
@@ -17,7 +17,7 @@ func testRoundTrip(t *testing.T, out, in roundTripper) {
 
 	bits := in.Encode()
 	t.Logf("Encoding: %+q", bits)
-	if err := out.UnmarshalBinary(bits); err != nil {
+	if err := out.Decode(bits); err != nil {
 		t.Fatalf("UnmarshalBinary: %v", err)
 	}
 	if diff := cmp.Diff(in, out); diff != "" {
