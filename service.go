@@ -8,27 +8,27 @@ import (
 	"github.com/creachadair/ffs/blob"
 )
 
-// Constants defining the method IDs for the store service.
+// Constants defining the method names for the store service.
 const (
-	mStatus = 99
-	mGet    = 100
-	mPut    = 101
-	mDelete = 102
-	// 103 was Size, now unused
-	mList   = 104
-	mLen    = 105
-	mCASPut = 201
-	mCASKey = 202
+	mStatus = "status"
+	mGet    = "get"
+	mPut    = "put"
+	mDelete = "delete"
+	mList   = "list"
+	mLen    = "len"
+	mCASPut = "cas-put"
+	mCASKey = "cas-key"
 )
 
 type Service struct {
+	pfx string
 	st  blob.Store
 	cas blob.CAS // populated iff st implements blob.CAS
 }
 
 // NewService constructs a service that delegates to the given blob.Store.
 func NewService(st blob.Store, opts *ServiceOpts) *Service {
-	s := &Service{st: st}
+	s := &Service{pfx: opts.prefix(), st: st}
 	if cas, ok := st.(blob.CAS); ok {
 		s.cas = cas
 	}
@@ -36,19 +36,31 @@ func NewService(st blob.Store, opts *ServiceOpts) *Service {
 }
 
 // ServiceOpts provides optional settings for constructing a Service.
-type ServiceOpts struct{}
+type ServiceOpts struct {
+	// A prefix to prepend to all the method names exported by the service.
+	Prefix string
+}
+
+func (o *ServiceOpts) prefix() string {
+	if o == nil {
+		return ""
+	}
+	return o.Prefix
+}
+
+func (s *Service) method(m string) string { return s.pfx + m }
 
 // Register adds method handlers to p for each of the applicable methods of s.
 func (s *Service) Register(p *chirp.Peer) {
-	p.Handle(mStatus, s.Status)
-	p.Handle(mGet, s.Get)
-	p.Handle(mPut, s.Put)
-	p.Handle(mDelete, s.Delete)
-	p.Handle(mList, s.List)
-	p.Handle(mLen, s.Len)
+	p.Handle(s.method(mStatus), s.Status)
+	p.Handle(s.method(mGet), s.Get)
+	p.Handle(s.method(mPut), s.Put)
+	p.Handle(s.method(mDelete), s.Delete)
+	p.Handle(s.method(mList), s.List)
+	p.Handle(s.method(mLen), s.Len)
 	if s.cas != nil {
-		p.Handle(mCASPut, s.CASPut)
-		p.Handle(mCASKey, s.CASKey)
+		p.Handle(s.method(mCASPut), s.CASPut)
+		p.Handle(s.method(mCASKey), s.CASKey)
 	}
 }
 

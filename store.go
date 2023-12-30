@@ -10,20 +10,35 @@ import (
 )
 
 // Store implements the blob.Store interface by calling a Chirp v0 peer.
-type Store struct{ peer *chirp.Peer }
+type Store struct {
+	pfx  string
+	peer *chirp.Peer
+}
 
 // NewStore constructs a Store that delegates through the given peer.
-func NewStore(peer *chirp.Peer, opts *StoreOpts) Store { return Store{peer: peer} }
+func NewStore(peer *chirp.Peer, opts *StoreOpts) Store { return Store{pfx: opts.prefix(), peer: peer} }
 
 // StoreOpts provide optional settings for a Store peer.
-type StoreOpts struct{}
+type StoreOpts struct {
+	// A prefix to prepend to all the method names exported by the service.
+	Prefix string
+}
+
+func (o *StoreOpts) prefix() string {
+	if o == nil {
+		return ""
+	}
+	return o.Prefix
+}
+
+func (s Store) method(m string) string { return s.pfx + m }
 
 // Close implements the blob.Closer interface.
 func (s Store) Close(_ context.Context) error { return s.peer.Stop() }
 
 // Get implements a method of blob.Store.
 func (s Store) Get(ctx context.Context, key string) ([]byte, error) {
-	rsp, err := s.peer.Call(ctx, mGet, []byte(key))
+	rsp, err := s.peer.Call(ctx, s.method(mGet), []byte(key))
 	if err != nil {
 		return nil, unfilterErr(err)
 	}
@@ -32,7 +47,7 @@ func (s Store) Get(ctx context.Context, key string) ([]byte, error) {
 
 // Put implements a method of blob.Store.
 func (s Store) Put(ctx context.Context, opts blob.PutOptions) error {
-	_, err := s.peer.Call(ctx, mPut, PutRequest{
+	_, err := s.peer.Call(ctx, s.method(mPut), PutRequest{
 		Key:     []byte(opts.Key),
 		Data:    opts.Data,
 		Replace: opts.Replace,
@@ -42,7 +57,7 @@ func (s Store) Put(ctx context.Context, opts blob.PutOptions) error {
 
 // Delete implements a method of blob.Store.
 func (s Store) Delete(ctx context.Context, key string) error {
-	_, err := s.peer.Call(ctx, mDelete, []byte(key))
+	_, err := s.peer.Call(ctx, s.method(mDelete), []byte(key))
 	return unfilterErr(err)
 }
 
@@ -52,7 +67,7 @@ func (s Store) List(ctx context.Context, start string, f func(string) error) err
 	for {
 		// Fetch another batch of keys.
 		var rsp ListResponse
-		if lres, err := s.peer.Call(ctx, mList, ListRequest{
+		if lres, err := s.peer.Call(ctx, s.method(mList), ListRequest{
 			Start: []byte(next),
 		}.Encode()); err != nil {
 			return err
@@ -81,7 +96,7 @@ func (s Store) List(ctx context.Context, start string, f func(string) error) err
 
 // Len implements a method of blob.Store.
 func (s Store) Len(ctx context.Context) (int64, error) {
-	rsp, err := s.peer.Call(ctx, mLen, nil)
+	rsp, err := s.peer.Call(ctx, s.method(mLen), nil)
 	if err != nil {
 		return 0, err
 	} else if len(rsp.Data) != 8 {
@@ -92,7 +107,7 @@ func (s Store) Len(ctx context.Context) (int64, error) {
 
 // Status calls the status method of the store service.
 func (s Store) Status(ctx context.Context) ([]byte, error) {
-	rsp, err := s.peer.Call(ctx, mStatus, nil)
+	rsp, err := s.peer.Call(ctx, s.method(mStatus), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +126,7 @@ func NewCAS(peer *chirp.Peer, opts *StoreOpts) CAS {
 
 // CASPut implements part of the blob.CAS type.
 func (c CAS) CASPut(ctx context.Context, opts blob.CASPutOptions) (string, error) {
-	rsp, err := c.peer.Call(ctx, mCASPut, CASPutRequest{
+	rsp, err := c.peer.Call(ctx, c.method(mCASPut), CASPutRequest{
 		Data:   opts.Data,
 		Prefix: []byte(opts.Prefix),
 		Suffix: []byte(opts.Suffix),
@@ -124,7 +139,7 @@ func (c CAS) CASPut(ctx context.Context, opts blob.CASPutOptions) (string, error
 
 // CASKey implements part of the blob.CAS type.
 func (c CAS) CASKey(ctx context.Context, opts blob.CASPutOptions) (string, error) {
-	rsp, err := c.peer.Call(ctx, mCASKey, CASPutRequest{
+	rsp, err := c.peer.Call(ctx, c.method(mCASKey), CASPutRequest{
 		Data:   opts.Data,
 		Prefix: []byte(opts.Prefix),
 		Suffix: []byte(opts.Suffix),
