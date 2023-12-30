@@ -15,15 +15,14 @@ class Client(object):
     PKT_REQUEST  = 2
     PKT_RESPONSE = 4
 
-    M_STATUS  = 99
-    M_GET     = 100
-    M_PUT     = 101
-    M_DELETE  = 102
-    M_SIZE    = 103
-    M_LIST    = 104
-    M_LEN     = 105
-    M_CAS_PUT = 201
-    M_CAS_KEY = 202
+    M_STATUS  = b'status'
+    M_GET     = b'get'
+    M_PUT     = b'put'
+    M_DELETE  = b'delete'
+    M_LIST    = b'list'
+    M_LEN     = b'len'
+    M_CAS_PUT = b'cas-put'
+    M_CAS_KEY = b'cas-key'
 
     ERR_KEY_EXISTS    = 400
     ERR_KEY_NOT_FOUND = 404
@@ -99,11 +98,11 @@ class Client(object):
             raise ServiceError(code, result[5:])
         return result[5:]
 
-    fmt_req = struct.Struct('>II')
+    fmt_req = struct.Struct('>IB')
 
     def __request(self, method_id, payload=b''):
         self._reqid += 1
-        return self._reqid, self.fmt_req.pack(self._reqid, method_id)+payload
+        return self._reqid, self.fmt_req.pack(self._reqid, len(method_id))+method_id+payload
 
     fmt_pkt = struct.Struct('>3sbI')
 
