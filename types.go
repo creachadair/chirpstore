@@ -1,3 +1,8 @@
+// Package chirpstore implements a Chirp v0 client and server exposing the blob.Store
+// interface.
+//
+// See https://github.com/creachadair/chirp for information about Chirp v0.
+// See https://godoc.org/creachadair/ffs for information about blob.Store.
 package chirpstore
 
 import (
