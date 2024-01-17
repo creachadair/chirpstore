@@ -1,11 +1,11 @@
 package chirpstore
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 
 	"github.com/creachadair/chirp"
+	"github.com/creachadair/chirp/packet"
 	"github.com/creachadair/ffs/blob"
 )
 
@@ -21,33 +21,30 @@ type PutRequest struct {
 	Replace bool
 
 	// Encoding:
-	// [1] replace [2] keylen=n [n] key [rest] data
+	// [1] replace [Vn] keylen [n] key [rest] data
 }
 
 // Encode converts p into a binary string for request data.
 func (p PutRequest) Encode() []byte {
-	buf := make([]byte, 3+len(p.Key)+len(p.Data)) // 1 replace, 2 keylen
-	if p.Replace {
-		buf[0] = 1
+	s := packet.Slice{
+		packet.Bool(p.Replace),
+		packet.Bytes(p.Key),
+		packet.Raw(p.Data),
 	}
-	putBytes(buf, p.Key, 1)
-	copy(buf[3:], p.Key)
-	copy(buf[3+len(p.Key):], p.Data)
-	return buf
+	buf := make([]byte, 0, s.EncodedLen())
+	return s.Encode(buf)
 }
 
 // Decode data from binary format and replace the contents of p.
 func (p *PutRequest) Decode(data []byte) error {
-	if len(data) < 3 {
-		return fmt.Errorf("invalid put request (%d bytes)", len(data))
-	}
-	_, key, err := getBytes(data, 1)
+	nb, err := packet.Parse(data,
+		(*packet.Bool)(&p.Replace),
+		(*packet.Bytes)(&p.Key),
+	)
 	if err != nil {
 		return fmt.Errorf("invalid put request: %w", err)
 	}
-	p.Replace = data[0] != 0
-	p.Key = key
-	p.Data = data[3+len(key):]
+	p.Data = data[nb:]
 	return nil
 }
 
@@ -57,24 +54,24 @@ type ListRequest struct {
 	Count int
 
 	// Encoding:
-	// [4] count [rest] start
+	// [V] count [rest] start
 }
 
 // Encode converts r into a binary string for request data.
 func (r ListRequest) Encode() []byte {
-	buf := make([]byte, 4+len(r.Start)) // 4 count
-	binary.BigEndian.PutUint32(buf[0:], uint32(r.Count))
-	copy(buf[4:], r.Start)
-	return buf
+	s := packet.Slice{packet.Vint30(r.Count), packet.Raw(r.Start)}
+	buf := make([]byte, 0, s.EncodedLen())
+	return s.Encode(buf)
 }
 
 // Decode data from binary format and replace the contents of r.
 func (r *ListRequest) Decode(data []byte) error {
-	if len(data) < 4 {
+	nb, c := packet.ParseVint30(data)
+	if nb < 0 {
 		return fmt.Errorf("invalid list request (%d bytes)", len(data))
 	}
-	r.Start = data[4:]
-	r.Count = int(binary.BigEndian.Uint32(data[0:]))
+	r.Count = int(c)
+	r.Start = data[nb:]
 	return nil
 }
 
@@ -83,37 +80,36 @@ type ListResponse struct {
 	Keys [][]byte
 	Next []byte
 
-	// [2] nlen=n [n] next |: [2] klen=k [k] key :|
+	// [Vn] nlen [n] next |: [Vk] klen [k] key :|
 }
 
 // Encode converts r into a binary string for response data.
 func (r ListResponse) Encode() []byte {
-	bufSize := 2 + len(r.Next)
-	for _, key := range r.Keys {
-		bufSize += 2 + len(key)
+	s := make(packet.Slice, 1+len(r.Keys))
+	s[0] = packet.Bytes(r.Next)
+	for i, key := range r.Keys {
+		s[i+1] = packet.Bytes(key)
 	}
-	buf := make([]byte, bufSize)
-	pos := putBytes(buf, r.Next, 0)
-	for _, key := range r.Keys {
-		pos = putBytes(buf, key, pos)
-	}
-	return buf
+	buf := make([]byte, 0, s.EncodedLen())
+	return s.Encode(buf)
 }
 
 // Decode data from binary format and replaces the contents of r.
 func (r *ListResponse) Decode(data []byte) error {
-	pos, next, err := getBytes(data, 0)
-	if err != nil {
-		return fmt.Errorf("invalid list response: %w", err)
+	nb, next := packet.ParseBytes(data)
+	if nb < 0 {
+		return errors.New("invalid list response (malformed next-key)")
 	}
-	r.Next = next
-	r.Keys = nil
-	for pos < len(data) {
-		pos, next, err = getBytes(data, pos)
-		if err != nil {
-			return fmt.Errorf("invalid list response: %w", err)
+	r.Next = []byte(next)
+	r.Keys = r.Keys[:0]
+	data = data[nb:]
+	for len(data) != 0 {
+		nb, key := packet.ParseBytes(data)
+		if nb < 0 {
+			return errors.New("invalid list response (malformed key)")
 		}
-		r.Keys = append(r.Keys, next)
+		r.Keys = append(r.Keys, []byte(key))
+		data = data[nb:]
 	}
 	return nil
 }
@@ -124,34 +120,26 @@ type CASPutRequest struct {
 	Data           []byte
 
 	// Encoding:
-	// [2] plen=n [n] prefix [2] slen=n [n] suffix [rest] data
+	// [Vp] plen [p] prefix [Vs] slen [s] suffix [rest] data
 }
 
 // Encode converts p into a binary string for request data.
 func (p CASPutRequest) Encode() []byte {
-	buf := make([]byte, 4+len(p.Prefix)+len(p.Suffix)+len(p.Data))
-	s := putBytes(buf, p.Prefix, 0)
-	d := putBytes(buf, p.Suffix, s)
-	copy(buf[d:], p.Data)
-	return buf
+	s := packet.Slice{packet.Bytes(p.Prefix), packet.Bytes(p.Suffix), packet.Raw(p.Data)}
+	buf := make([]byte, 0, s.EncodedLen())
+	return s.Encode(buf)
 }
 
 // Decode decodes data from binary format and replace the contents of
 func (p *CASPutRequest) Decode(data []byte) error {
-	if len(data) < 4 {
-		return fmt.Errorf("invalid CAS put request (%d bytes)", len(data))
-	}
-	s, pfx, err := getBytes(data, 0)
+	nb, err := packet.Parse(data,
+		(*packet.Bytes)(&p.Prefix),
+		(*packet.Bytes)(&p.Suffix),
+	)
 	if err != nil {
 		return fmt.Errorf("invalid CAS put request: %w", err)
 	}
-	d, sfx, err := getBytes(data, s)
-	if err != nil {
-		return fmt.Errorf("invalid CAS put request: %w", err)
-	}
-	p.Prefix = pfx
-	p.Suffix = sfx
-	p.Data = data[d:]
+	p.Data = data[nb:]
 	return nil
 }
 
@@ -183,33 +171,23 @@ func unfilterErr(err error) error {
 	return err
 }
 
-func uint16be(buf []byte) uint16 { return uint16(buf[0])<<8 | uint16(buf[1]) }
-
-func putUint16be(buf []byte, u uint16) {
-	buf[0] = byte((u >> 8) & 0xff)
-	buf[1] = byte(u & 0xff)
-}
-
-func putBytes(buf, src []byte, pos int) int {
-	putUint16be(buf[pos:], uint16(len(src)))
-	n := copy(buf[pos+2:], src)
-	return pos + 2 + n
-}
-
-func getBytes(buf []byte, pos int) (int, []byte, error) {
-	if pos+2 > len(buf) {
-		return pos, nil, errors.New("invalid length")
-	}
-	nb := int(uint16be(buf[pos:]))
-	end := pos + 2 + nb
-	if end > len(buf) {
-		return pos, nil, errors.New("truncated value")
-	}
-	return end, buf[pos+2 : end], nil
-}
-
 func packInt64(z int64) []byte {
 	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], uint64(z))
-	return buf[:]
+	if z == 0 {
+		return buf[:1]
+	}
+	i := 0
+	for u := uint64(z); u != 0; u >>= 8 {
+		buf[i] = byte(u & 0xff)
+		i++
+	}
+	return buf[:i]
+}
+
+func unpackInt64(buf []byte) int64 {
+	var v uint64
+	for i := len(buf) - 1; i >= 0; i-- {
+		v = (v << 8) | uint64(buf[i])
+	}
+	return int64(v)
 }

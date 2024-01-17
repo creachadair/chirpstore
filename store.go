@@ -2,7 +2,6 @@ package chirpstore
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 
 	"github.com/creachadair/chirp"
@@ -99,10 +98,10 @@ func (s Store) Len(ctx context.Context) (int64, error) {
 	rsp, err := s.peer.Call(ctx, s.method(mLen), nil)
 	if err != nil {
 		return 0, err
-	} else if len(rsp.Data) != 8 {
+	} else if len(rsp.Data) == 0 {
 		return 0, errors.New("len: invalid response format")
 	}
-	return int64(binary.BigEndian.Uint64(rsp.Data)), nil
+	return unpackInt64(rsp.Data), nil
 }
 
 // Status calls the status method of the store service.
