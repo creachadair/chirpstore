@@ -41,7 +41,9 @@ class Client(object):
     def len(self):
         """Report the number of keys in the store.
         """
-        return struct.unpack('>Q', self.__call(self.M_LEN))[0]
+        v = self.__call(self.M_LEN)
+        if len(v) < 8: v += b'\x00' * (8 - len(v))
+        return struct.unpack('<Q', v)[0]
 
     def list(self, count=0, start=b''):
         """List up to count keys in the store beginning at or after the given
@@ -54,17 +56,6 @@ class Client(object):
         """
         try:
             return self.__call(self.M_GET, key)
-        except ServiceError as e:
-            if e.code == self.ERR_KEY_NOT_FOUND:
-                raise KeyError(key) from e
-            raise
-
-    def size(self, key):
-        """Fetch the size of the specified key, or raise KeyError.
-        """
-        try:
-            data = self.__call(self.M_SIZE, key)
-            return struct.unpack('>Q', data)[0]
         except ServiceError as e:
             if e.code == self.ERR_KEY_NOT_FOUND:
                 raise KeyError(key) from e
@@ -164,34 +155,25 @@ class Conn(object):
             self._socket = None
 
 class PutRequest(object):
-    fmt = struct.Struct('>bH')
-
     def __init__(self, key, data, replace=False):
-        self.payload = self.fmt.Pack(int(replace), len(key)) + key + data
+        self.payload = bytes((int(replace),)) + vpack(len(key)) + key + data
 
 class ListRequest(object):
-    fmt = struct.Struct('>I')
-
     def __init__(self, count, start=b''):
-        self.payload = self.fmt.pack(count) + start
+        self.payload = vpack(count) + start
 
 class ListResponse(object):
-    fmt = struct.Struct('>H')
-
     def __init__(self, data):
         self.payload = data
         self.keys = []
         self.next = None
 
-        i = 0
-        while i < len(data):
-            size = self.fmt.unpack(data[i:i+self.fmt.size])[0]
-            i += self.fmt.size
-            if self.next is None:
-                self.next = Key(data[i:i+size])
-            else:
-                self.keys.append(Key(data[i:i+size]))
-            i += size
+        nk, rest = vbytes(data)
+        self.next = Key(nk)
+
+        while len(rest) != 0:
+            key, rest = vbytes(rest)
+            self.keys.append(Key(key))
 
     def has_more(self):
         return bool(self.next)
@@ -208,5 +190,31 @@ def dial(addr):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     s.connect((host, int(port)))
     return s
+
+def vlen(v: int) -> int:
+    if v < (1<<6): return 1
+    if v < (1<<14): return 2
+    if v < (1<<22): return 3
+    if v < (1<<30): return 4
+    raise TypeError(f'value {v} out of range')
+
+def vpack(v: int) -> bytes:
+    if v == 0: return b'\x00'
+    p = (v << 2) | (vlen(v) - 1)
+    return struct.pack('<I', p).rstrip(b'\x00')
+
+def vunpack(b: bytes) -> (int, bytes):
+    if len(b) == 0: raise TypeError('empty input')
+    s = (b[0]&3) + 1
+    if len(b) < s: raise TypeError(f'want {s} bytes, got {len(b)}')
+    r = b[:s]
+    if len(r) < 4: r += b'\x00' * (4-len(r))
+    v = struct.unpack('<I', r)[0]
+    return (v>>2), b[s:]
+
+def vbytes(b: bytes) -> (bytes, bytes):
+    n, rest = vunpack(b)
+    if len(rest) < n: raise TypeError(f'want {n} bytes, got {len(rest)}')
+    return rest[:n], rest[n:]
 
 __export__ = ('Client', 'dial')
