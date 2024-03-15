@@ -10,25 +10,31 @@ import (
 
 // Constants defining the method names for the store service.
 const (
-	mStatus = "status"
-	mGet    = "get"
-	mPut    = "put"
-	mDelete = "delete"
-	mList   = "list"
-	mLen    = "len"
-	mCASPut = "cas-put"
-	mCASKey = "cas-key"
+	mStatus   = "status"
+	mGet      = "get"
+	mPut      = "put"
+	mDelete   = "delete"
+	mList     = "list"
+	mLen      = "len"
+	mCASPut   = "cas-put"
+	mCASKey   = "cas-key"
+	mSyncKeys = "sync-keys"
 )
 
 type Service struct {
 	pfx string
-	st  blob.Store
+	st  blob.SyncKeyer
 	cas blob.CAS // populated iff st implements blob.CAS
 }
 
 // NewService constructs a service that delegates to the given blob.Store.
 func NewService(st blob.Store, opts *ServiceOpts) *Service {
-	s := &Service{pfx: opts.prefix(), st: st}
+	s := &Service{pfx: opts.prefix()}
+	if sk, ok := st.(blob.SyncKeyer); ok {
+		s.st = sk
+	} else {
+		s.st = blob.ListSyncKeyer{Store: st}
+	}
 	if cas, ok := st.(blob.CAS); ok {
 		s.cas = cas
 	}
@@ -58,6 +64,7 @@ func (s *Service) Register(p *chirp.Peer) {
 	p.Handle(s.method(mDelete), s.Delete)
 	p.Handle(s.method(mList), s.List)
 	p.Handle(s.method(mLen), s.Len)
+	p.Handle(s.method(mSyncKeys), s.SyncKeys)
 	if s.cas != nil {
 		p.Handle(s.method(mCASPut), s.CASPut)
 		p.Handle(s.method(mCASKey), s.CASKey)
@@ -163,4 +170,18 @@ func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error
 		Suffix: string(preq.Suffix),
 	})
 	return []byte(key), err
+}
+
+// SyncKeys reports which of the specified keys are not present in the store.
+func (s *Service) SyncKeys(ctx context.Context, req *chirp.Request) ([]byte, error) {
+	var sreq SyncRequest
+	if err := sreq.Decode(req.Data); err != nil {
+		return nil, err
+	}
+	missing, err := s.st.SyncKeys(ctx, sreq.getKeys())
+	if err != nil {
+		return nil, err
+	}
+	sreq.setKeys(missing)
+	return sreq.Encode(), nil
 }

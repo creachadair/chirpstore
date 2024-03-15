@@ -148,6 +148,58 @@ func (p *CASPutRequest) Decode(data []byte) error {
 	return nil
 }
 
+// SyncRequest is the encoding wrapper for a sync request message.
+type SyncRequest struct {
+	Keys [][]byte
+
+	// |: [Vk] klen [k] key :| */
+}
+
+func (s *SyncRequest) setKeys(keys []string) {
+	s.Keys = s.Keys[:0]
+	for _, key := range keys {
+		s.Keys = append(s.Keys, []byte(key))
+	}
+}
+
+func (s SyncRequest) getKeys() []string {
+	if len(s.Keys) == 0 {
+		return nil
+	}
+	out := make([]string, len(s.Keys))
+	for i, key := range s.Keys {
+		out[i] = string(key)
+	}
+	return out
+}
+
+// Encode converts s into a binary string.
+func (s SyncRequest) Encode() []byte {
+	pkt := make(packet.Slice, len(s.Keys))
+	for i, key := range s.Keys {
+		pkt[i] = packet.Bytes(key)
+	}
+	buf := make([]byte, 0, pkt.EncodedLen())
+	return pkt.Encode(buf)
+}
+
+// Decode parses data into the contents of s.
+func (s *SyncRequest) Decode(data []byte) error {
+	s.Keys = s.Keys[:0]
+	for len(data) != 0 {
+		nb, key := packet.ParseBytes(data)
+		if nb < 0 {
+			return errors.New("invalid sync data (malformed key)")
+		}
+		s.Keys = append(s.Keys, key)
+		data = data[nb:]
+	}
+	return nil
+}
+
+// SyncResponse is the encoding wrapper for a sync response message.
+type SyncResponse = SyncRequest
+
 func filterErr(err error) error {
 	if blob.IsKeyNotFound(err) {
 		ed := &chirp.ErrorData{Code: codeKeyNotFound, Message: "key not found"}

@@ -46,4 +46,7 @@ func TestTypes(t *testing.T) {
 		Suffix: []byte("this goes last"),
 		Data:   []byte("all the data that are fit to print"),
 	}))
+	t.Run("SyncRequest", testRoundTrip(new(chirpstore.SyncRequest), &chirpstore.SyncRequest{
+		Keys: [][]byte{[]byte("apple"), []byte("pear"), []byte("plum"), []byte("cherry")},
+	}))
 }

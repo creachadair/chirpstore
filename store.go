@@ -9,6 +9,7 @@ import (
 )
 
 // Store implements the blob.Store interface by calling a Chirp v0 peer.
+// It also supports the blob.CAS and blob.SyncKeyer extension interfaces.
 type Store struct {
 	pfx  string
 	peer *chirp.Peer
@@ -111,6 +112,24 @@ func (s Store) Status(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return rsp.Data, nil
+}
+
+// SyncKeys implements part of the blob.SyncKeyer interface.
+func (s Store) SyncKeys(ctx context.Context, keys []string) ([]string, error) {
+	if len(keys) == 0 {
+		return nil, nil // no sense calling the peer in this case
+	}
+	var sreq SyncRequest
+	sreq.setKeys(keys)
+	rsp, err := s.peer.Call(ctx, s.method(mSyncKeys), sreq.Encode())
+	if err != nil {
+		return nil, err
+	}
+	var srsp SyncResponse
+	if err := srsp.Decode(rsp.Data); err != nil {
+		return nil, err
+	}
+	return srsp.getKeys(), nil
 }
 
 // CAS implements the blob.CAS interface by calling a Chirp v0 peer.
