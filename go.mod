@@ -1,8 +1,6 @@
 module github.com/creachadair/chirpstore
 
-go 1.21
-
-toolchain go1.21.0
+go 1.22
 
 require (
 	github.com/creachadair/chirp v0.0.0-20240503150307-8154db204be6
