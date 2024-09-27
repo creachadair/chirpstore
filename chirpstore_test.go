@@ -22,6 +22,13 @@ var _ blob.CAS = chirpstore.CAS{}
 
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
 
+func logPacket(t *testing.T, tag string) chirp.PacketLogger {
+	return func(pkt *chirp.Packet, dir chirp.PacketDir) {
+		t.Helper()
+		t.Logf("%s: [%c] %v", tag, dir, pkt)
+	}
+}
+
 func newTestService(t *testing.T, bs blob.Store) *chirp.Peer {
 	if bs == nil {
 		bs = memstore.New()
@@ -31,8 +38,8 @@ func newTestService(t *testing.T, bs blob.Store) *chirp.Peer {
 	loc := peers.NewLocal()
 	svc.Register(loc.A)
 	if *doDebug {
-		loc.A.LogPackets(func(pkt chirp.PacketInfo) { t.Logf("A: %v", pkt) })
-		loc.B.LogPackets(func(pkt chirp.PacketInfo) { t.Logf("B: %v", pkt) })
+		loc.A.LogPackets(logPacket(t, "A"))
+		loc.B.LogPackets(logPacket(t, "B"))
 	}
 	t.Cleanup(func() {
 		if err := loc.Stop(); err != nil {
