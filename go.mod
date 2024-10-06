@@ -12,5 +12,5 @@ require (
 
 require (
 	github.com/creachadair/mds v0.21.2 // indirect
-	github.com/creachadair/taskgroup v0.9.4 // indirect
+	github.com/creachadair/taskgroup v0.11.0 // indirect
 )
