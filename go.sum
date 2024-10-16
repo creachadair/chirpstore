@@ -1,9 +1,9 @@
-github.com/creachadair/chirp v0.0.0-20240927041838-bb00d72c5a8f h1:+WI8fkdvFzGAaB+Q3o0Ly7ZoqqC/T5cemFtQkwAgwNg=
-github.com/creachadair/chirp v0.0.0-20240927041838-bb00d72c5a8f/go.mod h1:mrymxtSGiI0PnK2o8jW8nIYGuWisRfb/IZoAx46hvK0=
-github.com/creachadair/ffs v0.6.5 h1:40OHIe9XF+gvTRTdL4qAxU2TVtY6ZcfP5fMZskq1ffw=
-github.com/creachadair/ffs v0.6.5/go.mod h1:BjzoFgDUI51jQwew8SvRgBlNiqcW1UpKE8qjsDnkDdw=
-github.com/creachadair/mds v0.21.2 h1:D5130qi/kqmu+gGUQyDNOhrocGQp075ziTCgttxhh3k=
-github.com/creachadair/mds v0.21.2/go.mod h1:1ltMWZd9yXhaHEoZwBialMaviWVUpRPvMwVP7saFAzM=
+github.com/creachadair/chirp v0.0.0-20241006224827-23ecec328c5d h1:91bAWGDi03aK96pTRw1wo0uc94tdE5DRXyMyWbs92Pw=
+github.com/creachadair/chirp v0.0.0-20241006224827-23ecec328c5d/go.mod h1:q8mK+Hcv23DZz2fEKAAp182WQLzuJJ8DMe8fsG13W58=
+github.com/creachadair/ffs v0.6.6 h1:XmqSmnU8hbCFtGvnj0xxfxmRmCLfjcpiN0BnJeF3cGA=
+github.com/creachadair/ffs v0.6.6/go.mod h1:bXYm4aum7FWDdXtI6AJd/e/y1fO0yhBG4ibRhChTI5Y=
+github.com/creachadair/mds v0.21.3 h1:RRgEAPIb52cU0q7UxGyN+13QlCVTZIL4slRr0cYYQfA=
+github.com/creachadair/mds v0.21.3/go.mod h1:1ltMWZd9yXhaHEoZwBialMaviWVUpRPvMwVP7saFAzM=
 github.com/creachadair/taskgroup v0.11.0 h1:ALpBe7Qds+JyM4ZQKISLFyapHRjVb00eOQ88S0mzVNo=
 github.com/creachadair/taskgroup v0.11.0/go.mod h1:9oDDPt/5QPS4iylvPMC81GRlj+1je8AFDbjUh4zaQWo=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
