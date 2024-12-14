@@ -8,36 +8,36 @@ import (
 	"github.com/creachadair/ffs/blob"
 )
 
-// Store implements the blob.Store interface by calling a Chirp v0 peer.
-// It also supports the blob.CAS and blob.SyncKeyer extension interfaces.
-type Store struct {
+// KV implements the blob.KV interface by calling a Chirp v0 peer.
+// It also supports the [blob.CAS] and [blob.SyncKeyer] extension interfaces.
+type KV struct {
 	pfx  string
 	peer *chirp.Peer
 }
 
-// NewStore constructs a Store that delegates through the given peer.
-func NewStore(peer *chirp.Peer, opts *StoreOpts) Store { return Store{pfx: opts.prefix(), peer: peer} }
+// NewKV constructs a [KV] that delegates through the given peer.
+func NewKV(peer *chirp.Peer, opts *KVOptions) KV { return KV{pfx: opts.prefix(), peer: peer} }
 
-// StoreOpts provide optional settings for a Store peer.
-type StoreOpts struct {
+// KVOptions provide optional settings for a KV peer.
+type KVOptions struct {
 	// A prefix to prepend to all the method names exported by the service.
 	Prefix string
 }
 
-func (o *StoreOpts) prefix() string {
+func (o *KVOptions) prefix() string {
 	if o == nil {
 		return ""
 	}
 	return o.Prefix
 }
 
-func (s Store) method(m string) string { return s.pfx + m }
+func (s KV) method(m string) string { return s.pfx + m }
 
-// Close implements the blob.Closer interface.
-func (s Store) Close(_ context.Context) error { return s.peer.Stop() }
+// Close implements part of the [blob.KV] interface.
+func (s KV) Close(_ context.Context) error { return s.peer.Stop() }
 
-// Get implements a method of blob.Store.
-func (s Store) Get(ctx context.Context, key string) ([]byte, error) {
+// Get implements a method of [blob.KV].
+func (s KV) Get(ctx context.Context, key string) ([]byte, error) {
 	rsp, err := s.peer.Call(ctx, s.method(mGet), []byte(key))
 	if err != nil {
 		return nil, unfilterErr(err)
@@ -45,8 +45,8 @@ func (s Store) Get(ctx context.Context, key string) ([]byte, error) {
 	return rsp.Data, nil
 }
 
-// Put implements a method of blob.Store.
-func (s Store) Put(ctx context.Context, opts blob.PutOptions) error {
+// Put implements a method of [blob.KV].
+func (s KV) Put(ctx context.Context, opts blob.PutOptions) error {
 	_, err := s.peer.Call(ctx, s.method(mPut), PutRequest{
 		Key:     []byte(opts.Key),
 		Data:    opts.Data,
@@ -55,14 +55,14 @@ func (s Store) Put(ctx context.Context, opts blob.PutOptions) error {
 	return unfilterErr(err)
 }
 
-// Delete implements a method of blob.Store.
-func (s Store) Delete(ctx context.Context, key string) error {
+// Delete implements a method of [blob.KV].
+func (s KV) Delete(ctx context.Context, key string) error {
 	_, err := s.peer.Call(ctx, s.method(mDelete), []byte(key))
 	return unfilterErr(err)
 }
 
-// List implements a method of blob.Store.
-func (s Store) List(ctx context.Context, start string, f func(string) error) error {
+// List implements a method of [blob.KV].
+func (s KV) List(ctx context.Context, start string, f func(string) error) error {
 	next := start
 	for {
 		// Fetch another batch of keys.
@@ -94,8 +94,8 @@ func (s Store) List(ctx context.Context, start string, f func(string) error) err
 	return nil
 }
 
-// Len implements a method of blob.Store.
-func (s Store) Len(ctx context.Context) (int64, error) {
+// Len implements a method of [blob.KV].
+func (s KV) Len(ctx context.Context) (int64, error) {
 	rsp, err := s.peer.Call(ctx, s.method(mLen), nil)
 	if err != nil {
 		return 0, err
@@ -106,7 +106,7 @@ func (s Store) Len(ctx context.Context) (int64, error) {
 }
 
 // Status calls the status method of the store service.
-func (s Store) Status(ctx context.Context) ([]byte, error) {
+func (s KV) Status(ctx context.Context) ([]byte, error) {
 	rsp, err := s.peer.Call(ctx, s.method(mStatus), nil)
 	if err != nil {
 		return nil, err
@@ -114,8 +114,8 @@ func (s Store) Status(ctx context.Context) ([]byte, error) {
 	return rsp.Data, nil
 }
 
-// SyncKeys implements part of the blob.SyncKeyer interface.
-func (s Store) SyncKeys(ctx context.Context, keys []string) ([]string, error) {
+// SyncKeys implements the [blob.SyncKeyer] interface.
+func (s KV) SyncKeys(ctx context.Context, keys []string) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, nil // no sense calling the peer in this case
 	}
@@ -134,12 +134,12 @@ func (s Store) SyncKeys(ctx context.Context, keys []string) ([]string, error) {
 
 // CAS implements the blob.CAS interface by calling a Chirp v0 peer.
 type CAS struct {
-	Store
+	KV
 }
 
 // NewCAS constructs a CAS that delegates through the given peer.
-func NewCAS(peer *chirp.Peer, opts *StoreOpts) CAS {
-	return CAS{Store: NewStore(peer, opts)}
+func NewCAS(peer *chirp.Peer, opts *KVOptions) CAS {
+	return CAS{KV: NewKV(peer, opts)}
 }
 
 // CASPut implements part of the blob.CAS type.

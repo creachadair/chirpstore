@@ -17,7 +17,7 @@ import (
 )
 
 // Interface satisfaction checks.
-var _ blob.Store = chirpstore.Store{}
+var _ blob.KV = chirpstore.KV{}
 var _ blob.CAS = chirpstore.CAS{}
 
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
@@ -29,7 +29,7 @@ func logPacket(t *testing.T, tag string) chirp.PacketLogger {
 	}
 }
 
-func newTestService(t *testing.T, bs blob.Store) *chirp.Peer {
+func newTestService(t *testing.T, bs blob.KV) *chirp.Peer {
 	if bs == nil {
 		bs = memstore.New()
 	}
@@ -49,10 +49,10 @@ func newTestService(t *testing.T, bs blob.Store) *chirp.Peer {
 	return loc.B
 }
 
-func TestStore(t *testing.T) {
-	t.Run("Store", func(t *testing.T) {
+func TestKV(t *testing.T) {
+	t.Run("KV", func(t *testing.T) {
 		peer := newTestService(t, nil)
-		rs := chirpstore.NewStore(peer, nil)
+		rs := chirpstore.NewKV(peer, nil)
 		storetest.Run(t, rs)
 	})
 	t.Run("CAS", func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestSyncKeyer(t *testing.T) {
 	}))
 
 	ctx := context.Background()
-	rs := chirpstore.NewStore(peer, nil)
+	rs := chirpstore.NewKV(peer, nil)
 
 	t.Run("NoneMissing", func(t *testing.T) {
 		if got, err := rs.SyncKeys(ctx, []string{"one", "three", "two"}); err != nil {

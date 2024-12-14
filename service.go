@@ -27,13 +27,13 @@ type Service struct {
 	cas blob.CAS // populated iff st implements blob.CAS
 }
 
-// NewService constructs a service that delegates to the given blob.Store.
-func NewService(st blob.Store, opts *ServiceOpts) *Service {
+// NewService constructs a service that delegates to the given [blob.KV].
+func NewService(st blob.KV, opts *ServiceOptions) *Service {
 	s := &Service{pfx: opts.prefix()}
 	if sk, ok := st.(blob.SyncKeyer); ok {
 		s.st = sk
 	} else {
-		s.st = blob.ListSyncKeyer{Store: st}
+		s.st = blob.ListSyncKeyer{KV: st}
 	}
 	if cas, ok := st.(blob.CAS); ok {
 		s.cas = cas
@@ -41,13 +41,13 @@ func NewService(st blob.Store, opts *ServiceOpts) *Service {
 	return s
 }
 
-// ServiceOpts provides optional settings for constructing a Service.
-type ServiceOpts struct {
+// ServiceOptions provides optional settings for constructing a [Service].
+type ServiceOptions struct {
 	// A prefix to prepend to all the method names exported by the service.
 	Prefix string
 }
 
-func (o *ServiceOpts) prefix() string {
+func (o *ServiceOptions) prefix() string {
 	if o == nil {
 		return ""
 	}
