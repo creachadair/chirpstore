@@ -5,8 +5,8 @@ go 1.23
 toolchain go1.23.1
 
 require (
-	github.com/creachadair/chirp v0.0.0-20241203170543-75c3b4b20b68
-	github.com/creachadair/ffs v0.7.0
+	github.com/creachadair/chirp v0.0.0-20241211162625-40b46aae31a4
+	github.com/creachadair/ffs v0.7.1
 	github.com/google/go-cmp v0.6.0
 )
 
