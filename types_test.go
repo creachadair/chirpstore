@@ -29,11 +29,13 @@ func testRoundTrip(out, in roundTripper) func(*testing.T) {
 
 func TestTypes(t *testing.T) {
 	t.Run("PutRequest", testRoundTrip(new(chirpstore.PutRequest), &chirpstore.PutRequest{
+		ID:      1,
 		Key:     []byte("hey there delilah"),
 		Data:    []byte("what's it like in new york city"),
 		Replace: true,
 	}))
 	t.Run("ListRequest", testRoundTrip(new(chirpstore.ListRequest), &chirpstore.ListRequest{
+		ID:    2,
 		Start: []byte("the coolth of your evening smile"),
 		Count: 122,
 	}))
@@ -42,11 +44,30 @@ func TestTypes(t *testing.T) {
 		Keys: [][]byte{[]byte("crossroads"), []byte("spoonful"), []byte("train time")},
 	}))
 	t.Run("CASPutRequest", testRoundTrip(new(chirpstore.CASPutRequest), &chirpstore.CASPutRequest{
+		ID:     3,
 		Prefix: []byte("this goes first"),
 		Suffix: []byte("this goes last"),
 		Data:   []byte("all the data that are fit to print"),
 	}))
 	t.Run("SyncRequest", testRoundTrip(new(chirpstore.SyncRequest), &chirpstore.SyncRequest{
+		ID:   4,
 		Keys: [][]byte{[]byte("apple"), []byte("pear"), []byte("plum"), []byte("cherry")},
+	}))
+	t.Run("GetRequest", testRoundTrip(new(chirpstore.GetRequest), &chirpstore.GetRequest{
+		ID:  5,
+		Key: []byte("fall into sleep, fall into me"),
+	}))
+	t.Run("KeyspaceRequest", testRoundTrip(new(chirpstore.KeyspaceRequest), &chirpstore.KeyspaceRequest{
+		ID:  6,
+		Key: []byte("la padrona soy yo"),
+	}))
+	t.Run("KeyspaceResponse", testRoundTrip(new(chirpstore.KeyspaceResponse), &chirpstore.KeyspaceResponse{
+		ID: 7,
+	}))
+	t.Run("SyncResponse", testRoundTrip(new(chirpstore.SyncResponse), &chirpstore.SyncResponse{
+		Missing: [][]byte{[]byte("carmen"), []byte("sandiego")},
+	}))
+	t.Run("LenRequest", testRoundTrip(new(chirpstore.LenRequest), &chirpstore.LenRequest{
+		ID: 8,
 	}))
 }

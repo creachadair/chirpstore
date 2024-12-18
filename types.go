@@ -19,19 +19,75 @@ const (
 	codeKeyNotFound = 404
 )
 
+// IDKeyRequest is a shared type for requests that take an ID and a key.
+type IDKeyRequest struct {
+	ID  int
+	Key []byte
+
+	// [V] id [rest] key
+}
+
+// Encode converts g into a binary string for request data.
+func (r IDKeyRequest) Encode() []byte {
+	id := packet.Vint30(r.ID)
+	buf := make([]byte, 0, id.EncodedLen()+len(r.Key))
+	return append(id.Encode(buf), r.Key...)
+}
+
+// Decode data from binary format and replace the contents of g.
+func (r *IDKeyRequest) Decode(data []byte) error {
+	nb, id := packet.ParseVint30(data)
+	if nb < 0 {
+		return errors.New("invalid get request (malformed space ID)")
+	}
+	r.ID = int(id)
+	r.Key = data[nb:]
+	return nil
+}
+
+// IDOnly is a shared type for requests and responses that report only an ID.
+type IDOnly struct {
+	ID int
+
+	// [V] int
+}
+
+// Encode converts r into a binary string.
+func (r IDOnly) Encode() []byte {
+	var buf [4]byte
+	return packet.Vint30(r.ID).Encode(buf[:0])
+}
+
+// Decode parses data into the contents of r.
+func (r *IDOnly) Decode(data []byte) error {
+	nb, id := packet.ParseVint30(data)
+	if nb < 0 {
+		return errors.New("invalid ID request (malformed ID)")
+	} else if len(data) > nb {
+		return errors.New("extra data after ID")
+	}
+	r.ID = int(id)
+	return nil
+}
+
+type GetRequest = IDKeyRequest
+type DeleteRequest = IDKeyRequest
+
 // PutRequest is an encoding wrapper for the arguments of the Put method.
 type PutRequest struct {
+	ID      int
 	Key     []byte
 	Data    []byte
 	Replace bool
 
 	// Encoding:
-	// [1] replace [Vn] keylen [n] key [rest] data
+	// [V] id [1] replace [Vn] keylen [n] key [rest] data
 }
 
 // Encode converts p into a binary string for request data.
 func (p PutRequest) Encode() []byte {
 	s := packet.Slice{
+		packet.Vint30(p.ID),
 		packet.Bool(p.Replace),
 		packet.Bytes(p.Key),
 		packet.Raw(p.Data),
@@ -42,40 +98,49 @@ func (p PutRequest) Encode() []byte {
 
 // Decode data from binary format and replace the contents of p.
 func (p *PutRequest) Decode(data []byte) error {
-	nb, err := packet.Parse(data,
+	var id packet.Vint30
+	nb, err := packet.Parse(data, &id,
 		(*packet.Bool)(&p.Replace),
 		(*packet.Bytes)(&p.Key),
 	)
 	if err != nil {
 		return fmt.Errorf("invalid put request: %w", err)
 	}
+	p.ID = int(id)
 	p.Data = data[nb:]
 	return nil
 }
 
 // ListRequest is the an encoding wrapper for the arguments to the List method.
 type ListRequest struct {
+	ID    int
 	Start []byte
 	Count int
 
 	// Encoding:
-	// [V] count [rest] start
+	// [V] id [V] count [rest] start
 }
 
 // Encode converts r into a binary string for request data.
 func (r ListRequest) Encode() []byte {
-	s := packet.Slice{packet.Vint30(r.Count), packet.Raw(r.Start)}
+	s := packet.Slice{
+		packet.Vint30(r.ID),
+		packet.Vint30(r.Count),
+		packet.Raw(r.Start),
+	}
 	buf := make([]byte, 0, s.EncodedLen())
 	return s.Encode(buf)
 }
 
 // Decode data from binary format and replace the contents of r.
 func (r *ListRequest) Decode(data []byte) error {
-	nb, c := packet.ParseVint30(data)
-	if nb < 0 {
-		return fmt.Errorf("invalid list request (%d bytes)", len(data))
+	var id, count packet.Vint30
+	nb, err := packet.Parse(data, &id, &count)
+	if err != nil {
+		return fmt.Errorf("invalid list request: %w", err)
 	}
-	r.Count = int(c)
+	r.ID = int(id)
+	r.Count = int(count)
 	r.Start = data[nb:]
 	return nil
 }
@@ -121,63 +186,55 @@ func (r *ListResponse) Decode(data []byte) error {
 
 // CASPutRequest is the encoding wrapper for the CASPut method.
 type CASPutRequest struct {
+	ID             int
 	Prefix, Suffix []byte
 	Data           []byte
 
 	// Encoding:
-	// [Vp] plen [p] prefix [Vs] slen [s] suffix [rest] data
+	// [V] id [Vp] plen [p] prefix [Vs] slen [s] suffix [rest] data
 }
 
 // Encode converts p into a binary string for request data.
 func (p CASPutRequest) Encode() []byte {
-	s := packet.Slice{packet.Bytes(p.Prefix), packet.Bytes(p.Suffix), packet.Raw(p.Data)}
+	s := packet.Slice{
+		packet.Vint30(p.ID),
+		packet.Bytes(p.Prefix),
+		packet.Bytes(p.Suffix),
+		packet.Raw(p.Data),
+	}
 	buf := make([]byte, 0, s.EncodedLen())
 	return s.Encode(buf)
 }
 
 // Decode decodes data from binary format and replace the contents of
 func (p *CASPutRequest) Decode(data []byte) error {
-	nb, err := packet.Parse(data,
+	var id packet.Vint30
+	nb, err := packet.Parse(data, &id,
 		(*packet.Bytes)(&p.Prefix),
 		(*packet.Bytes)(&p.Suffix),
 	)
 	if err != nil {
 		return fmt.Errorf("invalid CAS put request: %w", err)
 	}
+	p.ID = int(id)
 	p.Data = data[nb:]
 	return nil
 }
 
 // SyncRequest is the encoding wrapper for a sync request message.
 type SyncRequest struct {
+	ID   int
 	Keys [][]byte
 
-	// |: [Vk] klen [k] key :| */
-}
-
-func (s *SyncRequest) setKeys(keys []string) {
-	s.Keys = s.Keys[:0]
-	for _, key := range keys {
-		s.Keys = append(s.Keys, []byte(key))
-	}
-}
-
-func (s SyncRequest) getKeys() []string {
-	if len(s.Keys) == 0 {
-		return nil
-	}
-	out := make([]string, len(s.Keys))
-	for i, key := range s.Keys {
-		out[i] = string(key)
-	}
-	return out
+	// [V] id |: [Vk] klen [k] key :| */
 }
 
 // Encode converts s into a binary string.
 func (s SyncRequest) Encode() []byte {
-	pkt := make(packet.Slice, len(s.Keys))
+	pkt := make(packet.Slice, len(s.Keys)+1)
+	pkt[0] = packet.Vint30(s.ID)
 	for i, key := range s.Keys {
-		pkt[i] = packet.Bytes(key)
+		pkt[i+1] = packet.Bytes(key)
 	}
 	buf := make([]byte, 0, pkt.EncodedLen())
 	return pkt.Encode(buf)
@@ -185,6 +242,13 @@ func (s SyncRequest) Encode() []byte {
 
 // Decode parses data into the contents of s.
 func (s *SyncRequest) Decode(data []byte) error {
+	nb, id := packet.ParseVint30(data)
+	if nb < 0 {
+		return errors.New("invalid sync request (malformed space ID)")
+	}
+	s.ID = int(id)
+	data = data[nb:]
+
 	s.Keys = s.Keys[:0]
 	for len(data) != 0 {
 		nb, key := packet.ParseBytes(data)
@@ -198,7 +262,50 @@ func (s *SyncRequest) Decode(data []byte) error {
 }
 
 // SyncResponse is the encoding wrapper for a sync response message.
-type SyncResponse = SyncRequest
+type SyncResponse struct {
+	Missing [][]byte
+
+	// |: [Vk] klen [k] key :| */
+}
+
+// Encode converts s into a binary string.
+func (s SyncResponse) Encode() []byte {
+	pkt := make(packet.Slice, len(s.Missing))
+	for i, key := range s.Missing {
+		pkt[i] = packet.Bytes(key)
+	}
+	buf := make([]byte, 0, pkt.EncodedLen())
+	return pkt.Encode(buf)
+}
+
+// Decode parses data into the contents of s.
+func (s *SyncResponse) Decode(data []byte) error {
+	s.Missing = s.Missing[:0]
+	for len(data) != 0 {
+		nb, key := packet.ParseBytes(data)
+		if nb < 0 {
+			return errors.New("invalid sync data (malformed key)")
+		}
+		s.Missing = append(s.Missing, key)
+		data = data[nb:]
+	}
+	return nil
+}
+
+// KeyspaceRequest is the encoding wrapper for a Keyspace request.
+type KeyspaceRequest = IDKeyRequest
+
+// KeyspaceResponse is the encoding wrapper for a Keyspace response.
+type KeyspaceResponse = IDOnly
+
+// SubRequest is the encoding wrapper for a Sub request.
+type SubRequest = IDKeyRequest
+
+// SubResponse is the encoding wrapper for a Sub response.
+type SubResponse = IDOnly
+
+// LenRequest is the encoding wrapper for a Len request.
+type LenRequest = IDOnly
 
 func filterErr(err error) error {
 	if blob.IsKeyNotFound(err) {
@@ -247,4 +354,22 @@ func unpackInt64(buf []byte) int64 {
 		v = (v << 8) | uint64(buf[i])
 	}
 	return int64(v)
+}
+
+func setKeys(target *[][]byte, keys []string) {
+	*target = (*target)[:0]
+	for _, key := range keys {
+		*target = append(*target, []byte(key))
+	}
+}
+
+func getKeys(keys *[][]byte) []string {
+	if len(*keys) == 0 {
+		return nil
+	}
+	out := make([]string, len(*keys))
+	for i, key := range *keys {
+		out[i] = string(key)
+	}
+	return out
 }
