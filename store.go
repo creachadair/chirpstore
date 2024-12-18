@@ -59,7 +59,8 @@ func (s *storeStub) child(id int) *storeStub {
 }
 
 // Keyspace implements part of the [blob.Store] interface.
-// The concrete type of a successful result is [KV].
+// The concrete type of a successful result is [KV], which implements the
+// [blob.CAS] and [blob.SyncKeyer] extension interfaces.
 func (s *storeStub) Keyspace(ctx context.Context, name string) (blob.KV, error) {
 	s.μ.Lock()
 	defer s.μ.Unlock()

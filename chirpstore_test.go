@@ -17,8 +17,11 @@ import (
 )
 
 // Interface satisfaction checks.
-var _ blob.KV = chirpstore.KV{}
-var _ blob.CAS = chirpstore.KV{}
+var (
+	_ blob.KV        = chirpstore.KV{}
+	_ blob.CAS       = chirpstore.KV{}
+	_ blob.SyncKeyer = chirpstore.KV{}
+)
 
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
 

@@ -89,6 +89,9 @@ func (s *Service) Register(p *chirp.Peer) {
 	p.Handle(s.method(mSubstore), s.Sub)
 }
 
+// Keyspace implements the eponymous method of the [blob.Store] interface.
+// The client is returned an integer descriptor (ID) that must be presented in
+// subsequent requests to identify which keyspace to affect.
 func (s *Service) Keyspace(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var kreq KeyspaceRequest
 	if err := kreq.Decode(req.Data); err != nil {
@@ -116,6 +119,9 @@ func (s *Service) Keyspace(ctx context.Context, req *chirp.Request) ([]byte, err
 	return KeyspaceResponse{ID: kvID}.Encode(), nil
 }
 
+// Sub implements the eponymous method of the [blob.Store] interface.
+// The client is returned an integer descriptor (ID) that must be presented in
+// subsequent substore and keyspace requests to identify which store to affect.
 func (s *Service) Sub(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var sreq SubRequest
 	if err := sreq.Decode(req.Data); err != nil {
@@ -150,7 +156,7 @@ func (s *Service) Status(ctx context.Context, req *chirp.Request) ([]byte, error
 	return []byte(mx.String()), nil
 }
 
-// Get handles the corresponding method of blob.Store.
+// Get handles the corresponding method of [blob.KV].
 func (s *Service) Get(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var greq GetRequest
 	if err := greq.Decode(req.Data); err != nil {
@@ -164,7 +170,7 @@ func (s *Service) Get(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	return data, filterErr(err)
 }
 
-// Put handles the corresponding method of blob.Store.
+// Put handles the corresponding method of [blob.KV].
 func (s *Service) Put(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var preq PutRequest
 	if err := preq.Decode(req.Data); err != nil {
@@ -181,7 +187,7 @@ func (s *Service) Put(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	}))
 }
 
-// Delete handles the corresponding method of blob.Store.
+// Delete handles the corresponding method of [blob.KV].
 func (s *Service) Delete(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var dreq DeleteRequest
 	if err := dreq.Decode(req.Data); err != nil {
@@ -194,7 +200,7 @@ func (s *Service) Delete(ctx context.Context, req *chirp.Request) ([]byte, error
 	return nil, filterErr(kv.Delete(ctx, string(dreq.Key)))
 }
 
-// List handles the corresponding method of blob.Store.
+// List handles the corresponding method of [blob.KV].
 func (s *Service) List(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var lreq ListRequest
 	if err := lreq.Decode(req.Data); err != nil {
@@ -224,7 +230,7 @@ func (s *Service) List(ctx context.Context, req *chirp.Request) ([]byte, error) 
 	return lrsp.Encode(), nil
 }
 
-// Len handles the corresponding method of blob.Store.
+// Len handles the corresponding method of [blob.KV].
 func (s *Service) Len(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var lreq LenRequest
 	if err := lreq.Decode(req.Data); err != nil {
@@ -241,8 +247,8 @@ func (s *Service) Len(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	return packInt64(size), nil
 }
 
-// CASPut implements content-addressable storage if the service has a CAS.
-// It reports an error if the underlying store is not a blob.CAS.
+// CASPut implements the corresponding method of [blob.CAS].
+// It reports an error if the underlying keyspace does not implement it.
 func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var preq CASPutRequest
 	if err := preq.Decode(req.Data); err != nil {
@@ -264,8 +270,8 @@ func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error
 	return []byte(key), err
 }
 
-// CASKey computes the hash key for the specified data, if the service has a CAS.
-// It reports an error if the underlying store is not a blob.CAS.
+// CASKey implements the corresponding method of [blob.CAS].
+// It reports an error if the underlying keyspace does not implement it.
 func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var preq CASPutRequest
 	if err := preq.Decode(req.Data); err != nil {
@@ -287,7 +293,9 @@ func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error
 	return []byte(key), err
 }
 
-// SyncKeys reports which of the specified keys are not present in the store.
+// SyncKeys implements the required method of [blob.SyncKeyer].
+// If the underlying keyspace does not implement it, a wrapper is provided
+// using [blob.ListSyncKeyer].
 func (s *Service) SyncKeys(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var sreq SyncRequest
 	if err := sreq.Decode(req.Data); err != nil {
