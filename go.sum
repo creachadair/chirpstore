@@ -1,7 +1,7 @@
 github.com/creachadair/chirp v0.0.0-20241211162625-40b46aae31a4 h1:zGElyeagq442KvoPfuDqAiZXAl5taL3EPrQLEHScCDA=
 github.com/creachadair/chirp v0.0.0-20241211162625-40b46aae31a4/go.mod h1:TlrG3bKh/2cKO5n2UhDxCv/KQF7YHDT3JUT3HL2+pbE=
-github.com/creachadair/ffs v0.7.2-0.20241218195804-ea9c7142ea51 h1:GKwNY26tQRrI+Kjayv2OE640EvJwyjD8oS3NVRzP4hc=
-github.com/creachadair/ffs v0.7.2-0.20241218195804-ea9c7142ea51/go.mod h1:PD7OPVlVGEvwg8kAoR8LsqsOFmjo8EERNOEJgtzC4x4=
+github.com/creachadair/ffs v0.8.0 h1:0iHQ6ykM7+3eDdjPoojhTRUPGfe4pecKiqIMLsUIPKQ=
+github.com/creachadair/ffs v0.8.0/go.mod h1:PD7OPVlVGEvwg8kAoR8LsqsOFmjo8EERNOEJgtzC4x4=
 github.com/creachadair/mds v0.22.0 h1:IRm4fWRKF9Pi4k3DEfgdlhMMYVxyef9FFall4r0GP4A=
 github.com/creachadair/mds v0.22.0/go.mod h1:ArfS0vPHoLV/SzuIzoqTEZfoYmac7n9Cj8XPANHocvw=
 github.com/creachadair/taskgroup v0.13.2 h1:3KyqakBuFsm3KkXi/9XIb0QcA8tEzLHLgaoidf0MdVc=
