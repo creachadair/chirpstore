@@ -2,7 +2,6 @@ package chirpstore_test
 
 import (
 	"context"
-	"crypto/sha1"
 	"flag"
 	"fmt"
 	"testing"
@@ -19,7 +18,6 @@ import (
 // Interface satisfaction checks.
 var (
 	_ blob.KV        = chirpstore.KV{}
-	_ blob.CAS       = chirpstore.KV{}
 	_ blob.SyncKeyer = chirpstore.KV{}
 )
 
@@ -58,20 +56,18 @@ func TestStore(t *testing.T) {
 }
 
 func TestCAS(t *testing.T) {
-	peer := newTestService(t, memstore.New(func() blob.KV {
-		return blob.NewCAS(memstore.NewKV(), sha1.New)
-	}))
-
-	// echo "abcde" | shasum -a 1
-	const input = "abcde\n"
-	const want = "ec11312386ad561674f724b8cca7cf1796e26d1d"
+	peer := newTestService(t, nil)
+	rs := chirpstore.NewStore(peer, nil)
 
 	ctx := context.Background()
-	rs := chirpstore.NewStore(peer, nil)
-	kv := storetest.SubKeyspace(t, ctx, rs, "").(chirpstore.KV)
+	cas := storetest.SubCAS(t, ctx, rs, "")
+
+	// Generate: https://go.dev/play/p/96wllQpFbRt
+	const input = "abcde\n"
+	const want = "171f7c7fa25081bd0e52d37990dd2d7624f986af4fc50714680c7f0e9df631d5"
 
 	t.Run("CASPut", func(t *testing.T) {
-		key, err := kv.CASPut(ctx, blob.CASPutOptions{Data: []byte(input)})
+		key, err := cas.CASPut(ctx, []byte(input))
 		if err != nil {
 			t.Errorf("PutCAS(%q) failed: %v", input, err)
 		} else if got := fmt.Sprintf("%x", key); got != want {
@@ -80,16 +76,14 @@ func TestCAS(t *testing.T) {
 	})
 
 	t.Run("CASKey", func(t *testing.T) {
-		key, err := kv.CASKey(ctx, blob.CASPutOptions{Data: []byte(input)})
-		if err != nil {
-			t.Errorf("CASKey(%q) failed: %v", input, err)
-		} else if got := fmt.Sprintf("%x", key); got != want {
+		key := cas.CASKey(ctx, []byte(input))
+		if got := fmt.Sprintf("%x", key); got != want {
 			t.Errorf("CASKey(%q): got key %q, want %q", input, got, want)
 		}
 	})
 
 	t.Run("Len", func(t *testing.T) {
-		n, err := kv.Len(ctx)
+		n, err := cas.Len(ctx)
 		if err != nil {
 			t.Errorf("Len failed: %v", err)
 		} else if n != 1 {
@@ -107,7 +101,7 @@ func TestSyncKeyer(t *testing.T) {
 
 	ctx := context.Background()
 	rs := chirpstore.NewStore(peer, nil)
-	kv := storetest.SubKeyspace(t, ctx, rs, "").(chirpstore.KV)
+	kv := storetest.SubKV(t, ctx, rs, "").(chirpstore.KV)
 
 	t.Run("NoneMissing", func(t *testing.T) {
 		if got, err := kv.SyncKeys(ctx, []string{"one", "three", "two"}); err != nil {

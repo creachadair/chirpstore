@@ -186,35 +186,25 @@ func (r *ListResponse) Decode(data []byte) error {
 
 // CASPutRequest is the encoding wrapper for the CASPut method.
 type CASPutRequest struct {
-	ID             int
-	Prefix, Suffix []byte
-	Data           []byte
+	ID   int
+	Data []byte
 
 	// Encoding:
-	// [V] id [Vp] plen [p] prefix [Vs] slen [s] suffix [rest] data
+	// [V] id [rest] data
 }
 
 // Encode converts p into a binary string for request data.
 func (p CASPutRequest) Encode() []byte {
-	s := packet.Slice{
-		packet.Vint30(p.ID),
-		packet.Bytes(p.Prefix),
-		packet.Bytes(p.Suffix),
-		packet.Raw(p.Data),
-	}
-	buf := make([]byte, 0, s.EncodedLen())
-	return s.Encode(buf)
+	id := packet.Vint30(p.ID)
+	buf := make([]byte, 0, id.EncodedLen()+len(p.Data))
+	return append(id.Encode(buf), p.Data...)
 }
 
 // Decode decodes data from binary format and replace the contents of
 func (p *CASPutRequest) Decode(data []byte) error {
-	var id packet.Vint30
-	nb, err := packet.Parse(data, &id,
-		(*packet.Bytes)(&p.Prefix),
-		(*packet.Bytes)(&p.Suffix),
-	)
-	if err != nil {
-		return fmt.Errorf("invalid CAS put request: %w", err)
+	nb, id := packet.ParseVint30(data)
+	if nb < 0 {
+		return errors.New("invalid put request (malformed space ID)")
 	}
 	p.ID = int(id)
 	p.Data = data[nb:]

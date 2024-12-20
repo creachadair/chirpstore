@@ -3,22 +3,48 @@ package chirpstore
 import (
 	"context"
 	"errors"
-	"sync"
 
 	"github.com/creachadair/chirp"
 	"github.com/creachadair/ffs/blob"
+	"github.com/creachadair/ffs/storage/dbkey"
+	"github.com/creachadair/ffs/storage/monitor"
 )
 
 // Store implements the [blob.StoreCloser] interface by delegating requests to
 // a Chirp v0 peer. Store and KV operations are delegated to the remote peer.
 type Store struct {
-	*storeStub // root (embedded to implement blob.Store)
+	*monitor.M[chirpStub, KV]
 }
 
 // NewStore constructs a Store that delegates through the given peer.
 func NewStore(peer *chirp.Peer, opts *StoreOptions) Store {
-	init := storeStub{pfx: opts.methodPrefix(), peer: peer}
-	return Store{storeStub: init.child(0)}
+	return Store{M: monitor.New(monitor.Config[chirpStub, KV]{
+		DB: chirpStub{pfx: opts.methodPrefix(), id: 0, peer: peer},
+		NewKV: func(ctx context.Context, db chirpStub, pfx dbkey.Prefix, name string) (KV, error) {
+			var rsp KeyspaceResponse
+			if krsp, err := db.peer.Call(ctx, db.method(mKeyspace), KeyspaceRequest{
+				ID:  db.id,
+				Key: []byte(name),
+			}.Encode()); err != nil {
+				return KV{}, err
+			} else if rsp.Decode(krsp.Data); err != nil {
+				return KV{}, err
+			}
+			return KV{spaceID: rsp.ID, pfx: db.pfx, peer: db.peer}, nil
+		},
+		NewSub: func(ctx context.Context, db chirpStub, pfx dbkey.Prefix, name string) (chirpStub, error) {
+			var rsp SubResponse
+			if srsp, err := db.peer.Call(ctx, db.method(mSubstore), SubRequest{
+				ID:  db.id,
+				Key: []byte(name),
+			}.Encode()); err != nil {
+				return db, err
+			} else if rsp.Decode(srsp.Data); err != nil {
+				return db, err
+			}
+			return db.withID(rsp.ID), nil
+		},
+	})}
 }
 
 // StoreOptions provide optional settings for a [Store].
@@ -35,87 +61,19 @@ func (o *StoreOptions) methodPrefix() string {
 	return o.MethodPrefix
 }
 
-// storeStub is the root of a (sub)tree of stores and KVs.
-type storeStub struct {
+// chirpStub contains the metadata for a substore.
+type chirpStub struct {
 	pfx  string
 	id   int
 	peer *chirp.Peer
-
-	μ    sync.Mutex
-	subs map[string]*storeStub
-	kvs  map[string]KV
 }
 
-// child constructs a new empty stub with the specified ID, using the same
-// method prefix and peer as s.
-func (s *storeStub) child(id int) *storeStub {
-	return &storeStub{
-		pfx:  s.pfx,
-		id:   id,
-		peer: s.peer,
-		subs: make(map[string]*storeStub),
-		kvs:  make(map[string]KV),
-	}
-}
+func (s chirpStub) method(m string) string { return s.pfx + m }
 
-// Keyspace implements part of the [blob.Store] interface.
-// The concrete type of a successful result is [KV], which implements the
-// [blob.CAS] and [blob.SyncKeyer] extension interfaces.
-func (s *storeStub) Keyspace(ctx context.Context, name string) (blob.KV, error) {
-	s.μ.Lock()
-	defer s.μ.Unlock()
-
-	kv, ok := s.kvs[name]
-	if !ok {
-		// We're holding the lock here during the call. I deem this is OK because
-		// keyspace requests are infrequent and generally done at or near program
-		// initialization. A program for which this is a performance gap should
-		// reconsider its life choices (and maybe file an issue).
-		var rsp KeyspaceResponse
-		if krsp, err := s.peer.Call(ctx, s.method(mKeyspace), KeyspaceRequest{
-			ID:  s.id,
-			Key: []byte(name),
-		}.Encode()); err != nil {
-			return nil, err
-		} else if rsp.Decode(krsp.Data); err != nil {
-			return nil, err
-		}
-		kv = KV{spaceID: rsp.ID, pfx: s.pfx, peer: s.peer}
-		s.kvs[name] = kv
-	}
-	return kv, nil
-}
-
-// Sub implements part of the [blob.Store] interface.
-func (s *storeStub) Sub(ctx context.Context, name string) (blob.Store, error) {
-	s.μ.Lock()
-	defer s.μ.Unlock()
-
-	sub, ok := s.subs[name]
-	if !ok {
-		// We're holding the lock here during the call. I deem this is OK because
-		// substore requests are infrequent and generally done at or near program
-		// initialization. A program for which this is a performance gap should
-		// reconsider its life choices (and maybe file an issue).
-		var rsp SubResponse
-		if srsp, err := s.peer.Call(ctx, s.method(mSubstore), SubRequest{
-			ID:  s.id,
-			Key: []byte(name),
-		}.Encode()); err != nil {
-			return nil, err
-		} else if rsp.Decode(srsp.Data); err != nil {
-			return nil, err
-		}
-		sub = s.child(rsp.ID)
-		s.subs[name] = sub
-	}
-	return sub, nil
-}
-
-func (s *storeStub) method(m string) string { return s.pfx + m }
+func (s chirpStub) withID(id int) chirpStub { s.id = id; return s }
 
 // Close implements part of the [blob.StoreCloser] interface.
-func (s Store) Close(context.Context) error { return s.storeStub.peer.Stop() }
+func (s Store) Close(context.Context) error { return s.DB.peer.Stop() }
 
 // KV implements the [blob.KV] interface by calling a Chirp v0 peer.
 type KV struct {
@@ -233,32 +191,4 @@ func (s KV) SyncKeys(ctx context.Context, keys []string) ([]string, error) {
 		return nil, err
 	}
 	return getKeys(&srsp.Missing), nil
-}
-
-// CASPut implements part of the [blob.CAS] interface.
-func (s KV) CASPut(ctx context.Context, opts blob.CASPutOptions) (string, error) {
-	rsp, err := s.peer.Call(ctx, s.method(mCASPut), CASPutRequest{
-		ID:     s.spaceID,
-		Data:   opts.Data,
-		Prefix: []byte(opts.Prefix),
-		Suffix: []byte(opts.Suffix),
-	}.Encode())
-	if err != nil {
-		return "", err
-	}
-	return string(rsp.Data), nil
-}
-
-// CASKey implements part of the [blob.CAS] interface.
-func (s KV) CASKey(ctx context.Context, opts blob.CASPutOptions) (string, error) {
-	rsp, err := s.peer.Call(ctx, s.method(mCASKey), CASPutRequest{
-		ID:     s.spaceID,
-		Data:   opts.Data,
-		Prefix: []byte(opts.Prefix),
-		Suffix: []byte(opts.Suffix),
-	}.Encode())
-	if err != nil {
-		return "", err
-	}
-	return string(rsp.Data), nil
 }

@@ -85,14 +85,14 @@ func (s *Service) Register(p *chirp.Peer) {
 	p.Handle(s.method(mSyncKeys), s.SyncKeys)
 	p.Handle(s.method(mCASPut), s.CASPut)
 	p.Handle(s.method(mCASKey), s.CASKey)
-	p.Handle(s.method(mKeyspace), s.Keyspace)
+	p.Handle(s.method(mKeyspace), s.KV)
 	p.Handle(s.method(mSubstore), s.Sub)
 }
 
-// Keyspace implements the eponymous method of the [blob.Store] interface.
+// KV implements the eponymous method of the [blob.Store] interface.
 // The client is returned an integer descriptor (ID) that must be presented in
 // subsequent requests to identify which keyspace to affect.
-func (s *Service) Keyspace(ctx context.Context, req *chirp.Request) ([]byte, error) {
+func (s *Service) KV(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var kreq KeyspaceRequest
 	if err := kreq.Decode(req.Data); err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (s *Service) Keyspace(ctx context.Context, req *chirp.Request) ([]byte, err
 	name := string(kreq.Key)
 	kvID, ok := si.kvs[name]
 	if !ok {
-		kv, err := si.store.Keyspace(ctx, name)
+		kv, err := si.store.KV(ctx, name)
 		if err != nil {
 			return nil, fmt.Errorf("create keyspace %q in store %d: %w", name, kreq.ID, err)
 		}
@@ -262,11 +262,7 @@ func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error
 	if !ok {
 		return nil, errors.New("KV does not implement content addressing")
 	}
-	key, err := cas.CASPut(ctx, blob.CASPutOptions{
-		Data:   preq.Data,
-		Prefix: string(preq.Prefix),
-		Suffix: string(preq.Suffix),
-	})
+	key, err := cas.CASPut(ctx, preq.Data)
 	return []byte(key), err
 }
 
@@ -285,12 +281,7 @@ func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error
 	if !ok {
 		return nil, errors.New("KV does not implement content addressing")
 	}
-	key, err := cas.CASKey(ctx, blob.CASPutOptions{
-		Data:   preq.Data,
-		Prefix: string(preq.Prefix),
-		Suffix: string(preq.Suffix),
-	})
-	return []byte(key), err
+	return []byte(cas.CASKey(ctx, preq.Data)), nil
 }
 
 // SyncKeys implements the required method of [blob.SyncKeyer].
