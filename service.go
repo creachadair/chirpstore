@@ -296,11 +296,7 @@ func (s *Service) SyncKeys(ctx context.Context, req *chirp.Request) ([]byte, err
 	if kv == nil {
 		return invalidKeyspaceID(sreq.ID)
 	}
-	sync, ok := kv.(blob.SyncKeyer)
-	if !ok {
-		sync = blob.ListSyncKeyer{KV: kv}
-	}
-	missing, err := sync.SyncKeys(ctx, getKeys(&sreq.Keys))
+	missing, err := blob.SyncKeys(ctx, kv, getKeys(&sreq.Keys))
 	if err != nil {
 		return nil, err
 	}
