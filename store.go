@@ -22,7 +22,7 @@ func NewStore(peer *chirp.Peer, opts *StoreOptions) Store {
 		DB: chirpStub{pfx: opts.methodPrefix(), id: 0, peer: peer},
 		NewKV: func(ctx context.Context, db chirpStub, pfx dbkey.Prefix, name string) (KV, error) {
 			var rsp KeyspaceResponse
-			if krsp, err := db.peer.Call(ctx, db.method(mKeyspace), KeyspaceRequest{
+			if krsp, err := db.peer.Call(ctx, db.method(mKV), KeyspaceRequest{
 				ID:  db.id,
 				Key: []byte(name),
 			}.Encode()); err != nil {
@@ -34,7 +34,7 @@ func NewStore(peer *chirp.Peer, opts *StoreOptions) Store {
 		},
 		NewSub: func(ctx context.Context, db chirpStub, pfx dbkey.Prefix, name string) (chirpStub, error) {
 			var rsp SubResponse
-			if srsp, err := db.peer.Call(ctx, db.method(mSubstore), SubRequest{
+			if srsp, err := db.peer.Call(ctx, db.method(mSub), SubRequest{
 				ID:  db.id,
 				Key: []byte(name),
 			}.Encode()); err != nil {

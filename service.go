@@ -2,7 +2,6 @@ package chirpstore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -26,8 +25,9 @@ const (
 	mSyncKeys = "sync-keys"
 
 	// Store methods.
-	mKeyspace = "keyspace"
-	mSubstore = "substore"
+	mKV  = "kv"
+	mCAS = "cas" // alias for mKV
+	mSub = "sub"
 )
 
 type Service struct {
@@ -83,10 +83,9 @@ func (s *Service) Register(p *chirp.Peer) {
 	p.Handle(s.method(mList), s.List)
 	p.Handle(s.method(mLen), s.Len)
 	p.Handle(s.method(mSyncKeys), s.SyncKeys)
-	p.Handle(s.method(mCASPut), s.CASPut)
-	p.Handle(s.method(mCASKey), s.CASKey)
-	p.Handle(s.method(mKeyspace), s.KV)
-	p.Handle(s.method(mSubstore), s.Sub)
+	p.Handle(s.method(mKV), s.KV)
+	p.Handle(s.method(mCAS), s.KV) // alias for "kv", the server treats them the same
+	p.Handle(s.method(mSub), s.Sub)
 }
 
 // KV implements the eponymous method of the [blob.Store] interface.
@@ -258,10 +257,7 @@ func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error
 	if kv == nil {
 		return invalidKeyspaceID(preq.ID)
 	}
-	cas, ok := kv.(blob.CAS)
-	if !ok {
-		return nil, errors.New("KV does not implement content addressing")
-	}
+	cas := blob.CASFromKV(kv)
 	key, err := cas.CASPut(ctx, preq.Data)
 	return []byte(key), err
 }
@@ -277,10 +273,7 @@ func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error
 	if kv == nil {
 		return invalidKeyspaceID(preq.ID)
 	}
-	cas, ok := kv.(blob.CAS)
-	if !ok {
-		return nil, errors.New("KV does not implement content addressing")
-	}
+	cas := blob.CASFromKV(kv)
 	return []byte(cas.CASKey(ctx, preq.Data)), nil
 }
 
