@@ -86,14 +86,12 @@ type PutRequest struct {
 
 // Encode converts p into a binary string for request data.
 func (p PutRequest) Encode() []byte {
-	s := packet.Slice{
+	return packet.Slice{
 		packet.Vint30(p.ID),
 		packet.Bool(p.Replace),
 		packet.Bytes(p.Key),
 		packet.Raw(p.Data),
-	}
-	buf := make([]byte, 0, s.EncodedLen())
-	return s.Encode(buf)
+	}.Encode(nil)
 }
 
 // Decode data from binary format and replace the contents of p.
@@ -123,13 +121,11 @@ type ListRequest struct {
 
 // Encode converts r into a binary string for request data.
 func (r ListRequest) Encode() []byte {
-	s := packet.Slice{
+	return packet.Slice{
 		packet.Vint30(r.ID),
 		packet.Vint30(r.Count),
 		packet.Raw(r.Start),
-	}
-	buf := make([]byte, 0, s.EncodedLen())
-	return s.Encode(buf)
+	}.Encode(nil)
 }
 
 // Decode data from binary format and replace the contents of r.
@@ -226,8 +222,7 @@ func (s SyncRequest) Encode() []byte {
 	for i, key := range s.Keys {
 		pkt[i+1] = packet.Bytes(key)
 	}
-	buf := make([]byte, 0, pkt.EncodedLen())
-	return pkt.Encode(buf)
+	return pkt.Encode(nil)
 }
 
 // Decode parses data into the contents of s.
@@ -264,8 +259,7 @@ func (s SyncResponse) Encode() []byte {
 	for i, key := range s.Missing {
 		pkt[i] = packet.Bytes(key)
 	}
-	buf := make([]byte, 0, pkt.EncodedLen())
-	return pkt.Encode(buf)
+	return pkt.Encode(nil)
 }
 
 // Decode parses data into the contents of s.
