@@ -196,18 +196,3 @@ func (s KV) Status(ctx context.Context) ([]byte, error) {
 	}
 	return rsp.Data, nil
 }
-
-// SyncKeys implements the [blob.SyncKeyer] interface.
-func (s KV) SyncKeys(ctx context.Context, keys []string) ([]string, error) {
-	stat, err := s.Stat(ctx, keys...)
-	if err != nil {
-		return nil, err
-	}
-	var missing []string
-	for _, want := range keys {
-		if !stat.Has(want) {
-			missing = append(missing, want)
-		}
-	}
-	return missing, nil
-}

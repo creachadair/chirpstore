@@ -12,14 +12,10 @@ import (
 	"github.com/creachadair/ffs/blob"
 	"github.com/creachadair/ffs/blob/memstore"
 	"github.com/creachadair/ffs/blob/storetest"
-	gocmp "github.com/google/go-cmp/cmp"
 )
 
 // Interface satisfaction checks.
-var (
-	_ blob.KV        = chirpstore.KV{}
-	_ blob.SyncKeyer = chirpstore.KV{}
-)
+var _ blob.KV = chirpstore.KV{}
 
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
 
@@ -88,33 +84,6 @@ func TestCAS(t *testing.T) {
 			t.Errorf("Len failed: %v", err)
 		} else if n != 1 {
 			t.Errorf("Len: got %d, want %d", n, 1)
-		}
-	})
-}
-
-func TestSyncKeyer(t *testing.T) {
-	peer := newTestService(t, memstore.New(func() blob.KV {
-		return memstore.NewKV().Init(map[string]string{
-			"one": "1", "two": "2", "three": "3", "four": "4",
-		})
-	}))
-
-	ctx := context.Background()
-	rs := chirpstore.NewStore(peer, nil)
-	kv := storetest.SubKV(t, ctx, rs, "").(chirpstore.KV)
-
-	t.Run("NoneMissing", func(t *testing.T) {
-		if got, err := kv.SyncKeys(ctx, []string{"one", "three", "two"}); err != nil {
-			t.Fatalf("SyncKeys: unexpected error: %v", err)
-		} else if len(got) != 0 {
-			t.Fatalf("SyncKeys: got %q, want empty", got)
-		}
-	})
-	t.Run("SomeMissing", func(t *testing.T) {
-		if got, err := kv.SyncKeys(ctx, []string{"one", "three", "five"}); err != nil {
-			t.Fatalf("SyncKeys: unexpected error: %v", err)
-		} else if diff := gocmp.Diff(got, []string{"five"}); diff != "" {
-			t.Fatalf("SyncKeys (-got, +want):\n%s", diff)
 		}
 	})
 }
