@@ -15,14 +15,14 @@ const (
 	mStatus = "status"
 
 	// Keyspace (KV) methods.
-	mGet      = "get"
-	mPut      = "put"
-	mDelete   = "delete"
-	mList     = "list"
-	mLen      = "len"
-	mCASPut   = "cas-put"
-	mCASKey   = "cas-key"
-	mSyncKeys = "sync-keys"
+	mGet    = "get"
+	mStat   = "stat"
+	mPut    = "put"
+	mDelete = "delete"
+	mList   = "list"
+	mLen    = "len"
+	mCASPut = "cas-put"
+	mCASKey = "cas-key"
 
 	// Store methods.
 	mKV  = "kv"
@@ -78,11 +78,11 @@ func (s *Service) method(m string) string { return s.pfx + m }
 func (s *Service) Register(p *chirp.Peer) {
 	p.Handle(s.method(mStatus), s.Status)
 	p.Handle(s.method(mGet), s.Get)
+	p.Handle(s.method(mStat), s.Stat)
 	p.Handle(s.method(mPut), s.Put)
 	p.Handle(s.method(mDelete), s.Delete)
 	p.Handle(s.method(mList), s.List)
 	p.Handle(s.method(mLen), s.Len)
-	p.Handle(s.method(mSyncKeys), s.SyncKeys)
 	p.Handle(s.method(mKV), s.KV)
 	p.Handle(s.method(mCAS), s.KV) // alias for "kv", the server treats them the same
 	p.Handle(s.method(mSub), s.Sub)
@@ -167,6 +167,31 @@ func (s *Service) Get(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	}
 	data, err := kv.Get(ctx, string(greq.Key))
 	return data, filterErr(err)
+}
+
+// Stat handles the corresponding method of [blob.KV].
+func (s *Service) Stat(ctx context.Context, req *chirp.Request) ([]byte, error) {
+	var sreq StatRequest
+	if err := sreq.Decode(req.Data); err != nil {
+		return nil, err
+	}
+	kv := s.idToKV(sreq.ID)
+	if kv == nil {
+		return invalidKeyspaceID(sreq.ID)
+	}
+	keys := make([]string, len(sreq.Keys))
+	for i, key := range sreq.Keys {
+		keys[i] = string(key)
+	}
+	data, err := kv.Stat(ctx, keys...)
+	if err != nil {
+		return nil, filterErr(err)
+	}
+	srsp := make(StatResponse, 0, len(data))
+	for key, stat := range data {
+		srsp = append(srsp, keyStat{Key: []byte(key), Size: stat.Size})
+	}
+	return srsp.Encode(), nil
 }
 
 // Put handles the corresponding method of [blob.KV].
@@ -275,27 +300,6 @@ func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error
 	}
 	cas := blob.CASFromKV(kv)
 	return []byte(cas.CASKey(ctx, preq.Data)), nil
-}
-
-// SyncKeys implements the required method of [blob.SyncKeyer].
-// If the underlying keyspace does not implement it, a wrapper is provided
-// using [blob.ListSyncKeyer].
-func (s *Service) SyncKeys(ctx context.Context, req *chirp.Request) ([]byte, error) {
-	var sreq SyncRequest
-	if err := sreq.Decode(req.Data); err != nil {
-		return nil, err
-	}
-	kv := s.idToKV(sreq.ID)
-	if kv == nil {
-		return invalidKeyspaceID(sreq.ID)
-	}
-	missing, err := blob.SyncKeys(ctx, kv, getKeys(&sreq.Keys))
-	if err != nil {
-		return nil, err
-	}
-	var srsp SyncResponse
-	setKeys(&srsp.Missing, missing)
-	return srsp.Encode(), nil
 }
 
 func (s *Service) idToKV(id int) blob.KV {

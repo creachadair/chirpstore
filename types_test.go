@@ -41,15 +41,20 @@ func TestTypes(t *testing.T) {
 	}))
 	t.Run("ListResponse", testRoundTrip(new(chirpstore.ListResponse), &chirpstore.ListResponse{
 		Next: []byte("toad"),
-		Keys: [][]byte{[]byte("crossroads"), []byte("spoonful"), []byte("train time")},
+		Keys: keyBytes("crossroads", "spoonful", "train time"),
 	}))
 	t.Run("CASPutRequest", testRoundTrip(new(chirpstore.CASPutRequest), &chirpstore.CASPutRequest{
 		ID:   3,
 		Data: []byte("all the data that are fit to print"),
 	}))
-	t.Run("SyncRequest", testRoundTrip(new(chirpstore.SyncRequest), &chirpstore.SyncRequest{
+	t.Run("StatRequest", testRoundTrip(new(chirpstore.StatRequest), &chirpstore.StatRequest{
 		ID:   4,
-		Keys: [][]byte{[]byte("apple"), []byte("pear"), []byte("plum"), []byte("cherry")},
+		Keys: keyBytes("apple", "pear", "plum", "cherry"),
+	}))
+	t.Run("StatResponse", testRoundTrip(new(chirpstore.StatResponse), &chirpstore.StatResponse{
+		{Key: []byte("klaatu"), Size: 17},
+		{Key: []byte("barada"), Size: 1951},
+		{Key: []byte("nikto"), Size: 1992},
 	}))
 	t.Run("GetRequest", testRoundTrip(new(chirpstore.GetRequest), &chirpstore.GetRequest{
 		ID:  5,
@@ -62,10 +67,15 @@ func TestTypes(t *testing.T) {
 	t.Run("KeyspaceResponse", testRoundTrip(new(chirpstore.KeyspaceResponse), &chirpstore.KeyspaceResponse{
 		ID: 7,
 	}))
-	t.Run("SyncResponse", testRoundTrip(new(chirpstore.SyncResponse), &chirpstore.SyncResponse{
-		Missing: [][]byte{[]byte("carmen"), []byte("sandiego")},
-	}))
 	t.Run("LenRequest", testRoundTrip(new(chirpstore.LenRequest), &chirpstore.LenRequest{
 		ID: 8,
 	}))
+}
+
+func keyBytes(keys ...string) [][]byte {
+	out := make([][]byte, len(keys))
+	for i, key := range keys {
+		out[i] = []byte(key)
+	}
+	return out
 }

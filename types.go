@@ -73,6 +73,98 @@ func (r *IDOnly) Decode(data []byte) error {
 type GetRequest = IDKeyRequest
 type DeleteRequest = IDKeyRequest
 
+// StatRequest is an encoding wrapper for the arguments of the Stat method.
+type StatRequest struct {
+	ID   int
+	Keys [][]byte
+
+	// Encoding:
+	// [V] id |: [Vk] klen [k] key :|
+}
+
+// Encode converts s into a binary string.
+func (s StatRequest) Encode() []byte {
+	pkt := make(packet.Slice, len(s.Keys)+1)
+	pkt[0] = packet.Vint30(s.ID)
+	for i, key := range s.Keys {
+		pkt[i+1] = packet.Bytes(key)
+	}
+	return pkt.Encode(nil)
+}
+
+// Decode parses data into the contents of s.
+func (s *StatRequest) Decode(data []byte) error {
+	nb, id := packet.ParseVint30(data)
+	if nb < 0 {
+		return errors.New("invalid sync request (malformed space ID)")
+	}
+	s.ID = int(id)
+	data = data[nb:]
+
+	s.Keys = s.Keys[:0]
+	for len(data) != 0 {
+		nb, key := packet.ParseBytes(data)
+		if nb < 0 {
+			return errors.New("invalid sync data (malformed key)")
+		}
+		s.Keys = append(s.Keys, key)
+		data = data[nb:]
+	}
+	return nil
+}
+
+// StatResponse is the encoding wrapper for a stat response message.
+type StatResponse []keyStat
+
+func (s StatResponse) Encode() []byte {
+	pkt := make(packet.Slice, len(s))
+	for i, ks := range s {
+		pkt[i] = ks
+	}
+	return pkt.Encode(nil)
+}
+
+func (s *StatResponse) Decode(data []byte) error {
+	var offset int
+	for len(data) != 0 {
+		var next keyStat
+		nr := next.Decode(data)
+		if nr < 0 {
+			return fmt.Errorf("offset %d: invalid key stat", offset)
+		}
+		*s = append(*s, next)
+
+		offset += nr
+		data = data[nr:]
+	}
+	return nil
+}
+
+// KeyStat records a key and its corresponding value size for use in a
+// StatResponse. It implements [packet.Encoder] and [packet.Decoder].
+type keyStat struct {
+	Key  []byte
+	Size int64
+}
+
+func (ks keyStat) EncodedLen() int {
+	return packet.Slice{packet.Bytes(ks.Key), packet.Vint30(ks.Size)}.EncodedLen()
+}
+
+func (ks keyStat) Encode(buf []byte) []byte {
+	return packet.Slice{packet.Bytes(ks.Key), packet.Vint30(ks.Size)}.Encode(buf)
+}
+
+func (ks *keyStat) Decode(buf []byte) int {
+	var size packet.Vint30
+	nr, err := packet.Parse(buf, (*packet.Bytes)(&ks.Key), &size)
+	if err != nil {
+		return -1
+	}
+	ks.Size = int64(size)
+	return nr
+}
+
 // PutRequest is an encoding wrapper for the arguments of the Put method.
 type PutRequest struct {
 	ID      int
@@ -207,75 +299,6 @@ func (p *CASPutRequest) Decode(data []byte) error {
 	return nil
 }
 
-// SyncRequest is the encoding wrapper for a sync request message.
-type SyncRequest struct {
-	ID   int
-	Keys [][]byte
-
-	// [V] id |: [Vk] klen [k] key :| */
-}
-
-// Encode converts s into a binary string.
-func (s SyncRequest) Encode() []byte {
-	pkt := make(packet.Slice, len(s.Keys)+1)
-	pkt[0] = packet.Vint30(s.ID)
-	for i, key := range s.Keys {
-		pkt[i+1] = packet.Bytes(key)
-	}
-	return pkt.Encode(nil)
-}
-
-// Decode parses data into the contents of s.
-func (s *SyncRequest) Decode(data []byte) error {
-	nb, id := packet.ParseVint30(data)
-	if nb < 0 {
-		return errors.New("invalid sync request (malformed space ID)")
-	}
-	s.ID = int(id)
-	data = data[nb:]
-
-	s.Keys = s.Keys[:0]
-	for len(data) != 0 {
-		nb, key := packet.ParseBytes(data)
-		if nb < 0 {
-			return errors.New("invalid sync data (malformed key)")
-		}
-		s.Keys = append(s.Keys, key)
-		data = data[nb:]
-	}
-	return nil
-}
-
-// SyncResponse is the encoding wrapper for a sync response message.
-type SyncResponse struct {
-	Missing [][]byte
-
-	// |: [Vk] klen [k] key :| */
-}
-
-// Encode converts s into a binary string.
-func (s SyncResponse) Encode() []byte {
-	pkt := make(packet.Slice, len(s.Missing))
-	for i, key := range s.Missing {
-		pkt[i] = packet.Bytes(key)
-	}
-	return pkt.Encode(nil)
-}
-
-// Decode parses data into the contents of s.
-func (s *SyncResponse) Decode(data []byte) error {
-	s.Missing = s.Missing[:0]
-	for len(data) != 0 {
-		nb, key := packet.ParseBytes(data)
-		if nb < 0 {
-			return errors.New("invalid sync data (malformed key)")
-		}
-		s.Missing = append(s.Missing, key)
-		data = data[nb:]
-	}
-	return nil
-}
-
 // KeyspaceRequest is the encoding wrapper for a Keyspace request.
 type KeyspaceRequest = IDKeyRequest
 
@@ -345,15 +368,4 @@ func setKeys(target *[][]byte, keys []string) {
 	for _, key := range keys {
 		*target = append(*target, []byte(key))
 	}
-}
-
-func getKeys(keys *[][]byte) []string {
-	if len(*keys) == 0 {
-		return nil
-	}
-	out := make([]string, len(*keys))
-	for i, key := range *keys {
-		out[i] = string(key)
-	}
-	return out
 }

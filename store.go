@@ -99,6 +99,28 @@ func (s KV) Get(ctx context.Context, key string) ([]byte, error) {
 	return rsp.Data, nil
 }
 
+// Stat implements a method of [blob.KV].
+func (s KV) Stat(ctx context.Context, keys ...string) (blob.StatMap, error) {
+	if len(keys) == 0 {
+		return nil, nil // no sense calling the peer in this case
+	}
+	sreq := StatRequest{ID: s.spaceID}
+	setKeys(&sreq.Keys, keys)
+	rsp, err := s.peer.Call(ctx, s.method(mStat), sreq.Encode())
+	if err != nil {
+		return nil, err
+	}
+	var srsp StatResponse
+	if err := srsp.Decode(rsp.Data); err != nil {
+		return nil, err
+	}
+	out := make(blob.StatMap, len(srsp))
+	for _, kv := range srsp {
+		out[string(kv.Key)] = blob.Stat{Size: kv.Size}
+	}
+	return out, nil
+}
+
 // Put implements a method of [blob.KV].
 func (s KV) Put(ctx context.Context, opts blob.PutOptions) error {
 	_, err := s.peer.Call(ctx, s.method(mPut), PutRequest{
@@ -177,18 +199,15 @@ func (s KV) Status(ctx context.Context) ([]byte, error) {
 
 // SyncKeys implements the [blob.SyncKeyer] interface.
 func (s KV) SyncKeys(ctx context.Context, keys []string) ([]string, error) {
-	if len(keys) == 0 {
-		return nil, nil // no sense calling the peer in this case
-	}
-	sreq := SyncRequest{ID: s.spaceID}
-	setKeys(&sreq.Keys, keys)
-	rsp, err := s.peer.Call(ctx, s.method(mSyncKeys), sreq.Encode())
+	stat, err := s.Stat(ctx, keys...)
 	if err != nil {
 		return nil, err
 	}
-	var srsp SyncResponse
-	if err := srsp.Decode(rsp.Data); err != nil {
-		return nil, err
+	var missing []string
+	for _, want := range keys {
+		if !stat.Has(want) {
+			missing = append(missing, want)
+		}
 	}
-	return getKeys(&srsp.Missing), nil
+	return missing, nil
 }
