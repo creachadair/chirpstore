@@ -73,8 +73,8 @@ func (r *IDOnly) Decode(data []byte) error {
 type GetRequest = IDKeyRequest
 type DeleteRequest = IDKeyRequest
 
-// StatRequest is an encoding wrapper for the arguments of the Stat method.
-type StatRequest struct {
+// HasRequest is an encoding wrapper for the arguments of the Has method.
+type HasRequest struct {
 	ID   int
 	Keys [][]byte
 
@@ -83,7 +83,7 @@ type StatRequest struct {
 }
 
 // Encode converts s into a binary string.
-func (s StatRequest) Encode() []byte {
+func (s HasRequest) Encode() []byte {
 	pkt := make(packet.Slice, len(s.Keys)+1)
 	pkt[0] = packet.Vint30(s.ID)
 	for i, key := range s.Keys {
@@ -93,7 +93,7 @@ func (s StatRequest) Encode() []byte {
 }
 
 // Decode parses data into the contents of s.
-func (s *StatRequest) Decode(data []byte) error {
+func (s *HasRequest) Decode(data []byte) error {
 	nb, id := packet.ParseVint30(data)
 	if nb < 0 {
 		return errors.New("invalid sync request (malformed space ID)")
@@ -111,58 +111,6 @@ func (s *StatRequest) Decode(data []byte) error {
 		data = data[nb:]
 	}
 	return nil
-}
-
-// StatResponse is the encoding wrapper for a stat response message.
-type StatResponse []keyStat
-
-func (s StatResponse) Encode() []byte {
-	pkt := make(packet.Slice, len(s))
-	for i, ks := range s {
-		pkt[i] = ks
-	}
-	return pkt.Encode(nil)
-}
-
-func (s *StatResponse) Decode(data []byte) error {
-	var offset int
-	for len(data) != 0 {
-		var next keyStat
-		nr := next.Decode(data)
-		if nr < 0 {
-			return fmt.Errorf("offset %d: invalid key stat", offset)
-		}
-		*s = append(*s, next)
-
-		offset += nr
-		data = data[nr:]
-	}
-	return nil
-}
-
-// KeyStat records a key and its corresponding value size for use in a
-// StatResponse. It implements [packet.Encoder] and [packet.Decoder].
-type keyStat struct {
-	Key  []byte
-	Size int64
-}
-
-func (ks keyStat) EncodedLen() int {
-	return packet.Slice{packet.Bytes(ks.Key), packet.Vint30(ks.Size)}.EncodedLen()
-}
-
-func (ks keyStat) Encode(buf []byte) []byte {
-	return packet.Slice{packet.Bytes(ks.Key), packet.Vint30(ks.Size)}.Encode(buf)
-}
-
-func (ks *keyStat) Decode(buf []byte) int {
-	var size packet.Vint30
-	nr, err := packet.Parse(buf, (*packet.Bytes)(&ks.Key), &size)
-	if err != nil {
-		return -1
-	}
-	ks.Size = int64(size)
-	return nr
 }
 
 // PutRequest is an encoding wrapper for the arguments of the Put method.

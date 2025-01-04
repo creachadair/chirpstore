@@ -3,6 +3,7 @@ package chirpstore
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/creachadair/chirp"
 	"github.com/creachadair/ffs/blob"
@@ -99,24 +100,24 @@ func (s KV) Get(ctx context.Context, key string) ([]byte, error) {
 	return rsp.Data, nil
 }
 
-// Stat implements a method of [blob.KV].
-func (s KV) Stat(ctx context.Context, keys ...string) (blob.StatMap, error) {
+// Has implements a method of [blob.KV].
+func (s KV) Has(ctx context.Context, keys ...string) (blob.KeySet, error) {
 	if len(keys) == 0 {
 		return nil, nil // no sense calling the peer in this case
 	}
-	sreq := StatRequest{ID: s.spaceID}
+	sreq := HasRequest{ID: s.spaceID}
 	setKeys(&sreq.Keys, keys)
-	rsp, err := s.peer.Call(ctx, s.method(mStat), sreq.Encode())
+	rsp, err := s.peer.Call(ctx, s.method(mHas), sreq.Encode())
 	if err != nil {
 		return nil, err
+	} else if len(rsp.Data) != len(keys) {
+		return nil, fmt.Errorf("has: got %d results, want %d", len(rsp.Data), len(keys))
 	}
-	var srsp StatResponse
-	if err := srsp.Decode(rsp.Data); err != nil {
-		return nil, err
-	}
-	out := make(blob.StatMap, len(srsp))
-	for _, kv := range srsp {
-		out[string(kv.Key)] = blob.Stat{Size: kv.Size}
+	var out blob.KeySet
+	for i, key := range keys {
+		if rsp.Data[i] != 0 {
+			out.Add(key)
+		}
 	}
 	return out, nil
 }

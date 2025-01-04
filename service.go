@@ -16,7 +16,7 @@ const (
 
 	// Keyspace (KV) methods.
 	mGet    = "get"
-	mStat   = "stat"
+	mHas    = "has"
 	mPut    = "put"
 	mDelete = "delete"
 	mList   = "list"
@@ -78,7 +78,7 @@ func (s *Service) method(m string) string { return s.pfx + m }
 func (s *Service) Register(p *chirp.Peer) {
 	p.Handle(s.method(mStatus), s.Status)
 	p.Handle(s.method(mGet), s.Get)
-	p.Handle(s.method(mStat), s.Stat)
+	p.Handle(s.method(mHas), s.Has)
 	p.Handle(s.method(mPut), s.Put)
 	p.Handle(s.method(mDelete), s.Delete)
 	p.Handle(s.method(mList), s.List)
@@ -169,9 +169,9 @@ func (s *Service) Get(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	return data, filterErr(err)
 }
 
-// Stat handles the corresponding method of [blob.KV].
-func (s *Service) Stat(ctx context.Context, req *chirp.Request) ([]byte, error) {
-	var sreq StatRequest
+// Has handles the corresponding method of [blob.KV].
+func (s *Service) Has(ctx context.Context, req *chirp.Request) ([]byte, error) {
+	var sreq HasRequest
 	if err := sreq.Decode(req.Data); err != nil {
 		return nil, err
 	}
@@ -183,15 +183,17 @@ func (s *Service) Stat(ctx context.Context, req *chirp.Request) ([]byte, error) 
 	for i, key := range sreq.Keys {
 		keys[i] = string(key)
 	}
-	data, err := kv.Stat(ctx, keys...)
+	data, err := kv.Has(ctx, keys...)
 	if err != nil {
 		return nil, filterErr(err)
 	}
-	srsp := make(StatResponse, 0, len(data))
-	for key, stat := range data {
-		srsp = append(srsp, keyStat{Key: []byte(key), Size: stat.Size})
+	srsp := make([]byte, len(keys))
+	for i, key := range keys {
+		if data.Has(key) {
+			srsp[i] = 1
+		}
 	}
-	return srsp.Encode(), nil
+	return srsp, nil
 }
 
 // Put handles the corresponding method of [blob.KV].

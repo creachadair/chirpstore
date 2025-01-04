@@ -47,14 +47,9 @@ func TestTypes(t *testing.T) {
 		ID:   3,
 		Data: []byte("all the data that are fit to print"),
 	}))
-	t.Run("StatRequest", testRoundTrip(new(chirpstore.StatRequest), &chirpstore.StatRequest{
+	t.Run("HasRequest", testRoundTrip(new(chirpstore.HasRequest), &chirpstore.HasRequest{
 		ID:   4,
 		Keys: keyBytes("apple", "pear", "plum", "cherry"),
-	}))
-	t.Run("StatResponse", testRoundTrip(new(chirpstore.StatResponse), &chirpstore.StatResponse{
-		{Key: []byte("klaatu"), Size: 17},
-		{Key: []byte("barada"), Size: 1951},
-		{Key: []byte("nikto"), Size: 1992},
 	}))
 	t.Run("GetRequest", testRoundTrip(new(chirpstore.GetRequest), &chirpstore.GetRequest{
 		ID:  5,
