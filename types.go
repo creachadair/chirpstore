@@ -84,31 +84,19 @@ type HasRequest struct {
 
 // Encode converts s into a binary string.
 func (s HasRequest) Encode() []byte {
-	pkt := make(packet.Slice, len(s.Keys)+1)
-	pkt[0] = packet.Vint30(s.ID)
-	for i, key := range s.Keys {
-		pkt[i+1] = packet.Bytes(key)
-	}
-	return pkt.Encode(nil)
+	buf := packet.Vint30(s.ID).Encode(nil)
+	return packet.MBytes(s.Keys).Encode(buf)
 }
 
 // Decode parses data into the contents of s.
 func (s *HasRequest) Decode(data []byte) error {
 	nb, id := packet.ParseVint30(data)
 	if nb < 0 {
-		return errors.New("invalid sync request (malformed space ID)")
+		return errors.New("invalid has request (malformed space ID)")
 	}
 	s.ID = int(id)
-	data = data[nb:]
-
-	s.Keys = s.Keys[:0]
-	for len(data) != 0 {
-		nb, key := packet.ParseBytes(data)
-		if nb < 0 {
-			return errors.New("invalid sync data (malformed key)")
-		}
-		s.Keys = append(s.Keys, key)
-		data = data[nb:]
+	if (*packet.MBytes)(&s.Keys).Decode(data[nb:]) < 0 {
+		return errors.New("invalid has request (malformed keys)")
 	}
 	return nil
 }
@@ -309,11 +297,4 @@ func unpackInt64(buf []byte) int64 {
 		v = (v << 8) | uint64(buf[i])
 	}
 	return int64(v)
-}
-
-func setKeys(target *[][]byte, keys []string) {
-	*target = (*target)[:0]
-	for _, key := range keys {
-		*target = append(*target, []byte(key))
-	}
 }
