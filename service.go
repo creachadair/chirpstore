@@ -243,15 +243,11 @@ func (s *Service) List(ctx context.Context, req *chirp.Request) ([]byte, error) 
 	}
 
 	var lrsp ListResponse
-	if err := kv.List(ctx, string(lreq.Start), func(key string) error {
-		if len(lrsp.Keys) == limit {
-			lrsp.Next = []byte(key)
-			return blob.ErrStopListing
+	for key, err := range kv.List(ctx, string(lreq.Start)) {
+		if err != nil {
+			return nil, err
 		}
 		lrsp.Keys = append(lrsp.Keys, []byte(key))
-		return nil
-	}); err != nil {
-		return nil, err
 	}
 	return lrsp.Encode(), nil
 }

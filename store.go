@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 
 	"github.com/creachadair/chirp"
 	"github.com/creachadair/ffs/blob"
@@ -143,37 +144,38 @@ func (s KV) Delete(ctx context.Context, key string) error {
 }
 
 // List implements a method of [blob.KV].
-func (s KV) List(ctx context.Context, start string, f func(string) error) error {
-	next := start
-	for {
-		// Fetch another batch of keys.
-		var rsp ListResponse
-		if lres, err := s.peer.Call(ctx, s.method(mList), ListRequest{
-			ID:    s.spaceID,
-			Start: []byte(next),
-		}.Encode()); err != nil {
-			return err
-		} else if err := rsp.Decode(lres.Data); err != nil {
-			return err
-		}
-		if len(rsp.Keys) == 0 {
-			break
-		}
-
-		// Deliver keys to the callback.
-		for _, key := range rsp.Keys {
-			if err := f(string(key)); errors.Is(err, blob.ErrStopListing) {
-				return nil
-			} else if err != nil {
-				return err
+func (s KV) List(ctx context.Context, start string) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		next := start
+		for {
+			// Fetch another batch of keys.
+			var rsp ListResponse
+			if lres, err := s.peer.Call(ctx, s.method(mList), ListRequest{
+				ID:    s.spaceID,
+				Start: []byte(next),
+			}.Encode()); err != nil {
+				yield("", err)
+				return
+			} else if err := rsp.Decode(lres.Data); err != nil {
+				yield("", err)
+				return
 			}
+			if len(rsp.Keys) == 0 {
+				break
+			}
+
+			// Deliver keys to the callback.
+			for _, key := range rsp.Keys {
+				if !yield(string(key), nil) {
+					return
+				}
+			}
+			if len(rsp.Next) == 0 {
+				return
+			}
+			next = string(rsp.Next)
 		}
-		if len(rsp.Next) == 0 {
-			break
-		}
-		next = string(rsp.Next)
 	}
-	return nil
 }
 
 // Len implements a method of [blob.KV].
