@@ -247,6 +247,10 @@ func (s *Service) List(ctx context.Context, req *chirp.Request) ([]byte, error) 
 		if err != nil {
 			return nil, err
 		}
+		if len(lrsp.Keys) == limit {
+			lrsp.Next = []byte(key)
+			break
+		}
 		lrsp.Keys = append(lrsp.Keys, []byte(key))
 	}
 	return lrsp.Encode(), nil
