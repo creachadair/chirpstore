@@ -83,14 +83,14 @@ func (s HasRequest) Encode() []byte {
 
 // Decode parses data into the contents of s.
 func (s *HasRequest) Decode(data []byte) error {
-	nb, id := packet.ParseVint30(data)
-	if nb < 0 {
-		return errors.New("invalid has request (malformed space ID)")
+	id, rest, err := parseIDAndData(data)
+	if err != nil {
+		return fmt.Errorf("invalid has request: %w", err)
 	}
-	s.ID = int(id)
-	if (*packet.MBytes)(&s.Keys).Decode(data[nb:]) < 0 {
-		return errors.New("invalid has request (malformed keys)")
+	if (*packet.MBytes)(&s.Keys).Decode(rest) < 0 {
+		return errors.New("invalid has request: malformed keys")
 	}
+	s.ID = id
 	return nil
 }
 
