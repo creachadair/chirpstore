@@ -228,25 +228,37 @@ type SubResponse = IDOnly
 type LenRequest = IDOnly
 
 func filterErr(err error) error {
+	var kerr *blob.KeyError
+
 	if blob.IsKeyNotFound(err) {
 		ed := &chirp.ErrorData{Code: codeKeyNotFound, Message: "key not found"}
-		if e, ok := err.(*blob.KeyError); ok {
-			ed.Data = []byte(e.Key)
+		if errors.As(err, &kerr) {
+			ed.Data = []byte(kerr.Key)
 		}
 		return ed
 	} else if blob.IsKeyExists(err) {
-		return &chirp.ErrorData{Code: codeKeyExists, Message: "key exists"}
+		ed := &chirp.ErrorData{Code: codeKeyExists, Message: "key exists"}
+		if errors.As(err, &kerr) {
+			ed.Data = []byte(kerr.Key)
+		}
+		return ed
 	}
 	return err
 }
 
 func unfilterErr(err error) error {
-	if ce, ok := err.(*chirp.CallError); ok {
+	var ce *chirp.CallError
+	if errors.As(err, &ce) {
+		key := string(ce.Data)
+
 		if ce.Code == codeKeyExists {
+			if key != "" {
+				return blob.KeyExists(key)
+			}
 			return blob.ErrKeyExists
 		} else if ce.Code == codeKeyNotFound {
-			if len(ce.Data) != 0 {
-				return blob.KeyNotFound(string(ce.Data))
+			if key != "" {
+				return blob.KeyNotFound(key)
 			}
 			return blob.ErrKeyNotFound
 		}
