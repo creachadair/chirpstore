@@ -21,8 +21,6 @@ const (
 	mDelete = "delete"
 	mList   = "list"
 	mLen    = "len"
-	mCASPut = "cas-put"
-	mCASKey = "cas-key"
 
 	// Store methods.
 	mKV  = "kv"
@@ -271,37 +269,6 @@ func (s *Service) Len(ctx context.Context, req *chirp.Request) ([]byte, error) {
 		return nil, err
 	}
 	return packInt64(size), nil
-}
-
-// CASPut implements the corresponding method of [blob.CAS].
-// It reports an error if the underlying keyspace does not implement it.
-func (s *Service) CASPut(ctx context.Context, req *chirp.Request) ([]byte, error) {
-	var preq CASPutRequest
-	if err := preq.Decode(req.Data); err != nil {
-		return nil, err
-	}
-	kv := s.idToKV(preq.ID)
-	if kv == nil {
-		return invalidKeyspaceID(preq.ID)
-	}
-	cas := blob.CASFromKV(kv)
-	key, err := cas.CASPut(ctx, preq.Data)
-	return []byte(key), err
-}
-
-// CASKey implements the corresponding method of [blob.CAS].
-// It reports an error if the underlying keyspace does not implement it.
-func (s *Service) CASKey(ctx context.Context, req *chirp.Request) ([]byte, error) {
-	var preq CASPutRequest
-	if err := preq.Decode(req.Data); err != nil {
-		return nil, err
-	}
-	kv := s.idToKV(preq.ID)
-	if kv == nil {
-		return invalidKeyspaceID(preq.ID)
-	}
-	cas := blob.CASFromKV(kv)
-	return []byte(cas.CASKey(ctx, preq.Data)), nil
 }
 
 func (s *Service) idToKV(id int) blob.KV {
