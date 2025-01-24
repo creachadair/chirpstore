@@ -86,9 +86,6 @@ type KV struct {
 
 func (s KV) method(m string) string { return s.pfx + m }
 
-// Close implements part of the [blob.KV] interface.
-func (s KV) Close(_ context.Context) error { return s.peer.Stop() }
-
 // Get implements a method of [blob.KV].
 func (s KV) Get(ctx context.Context, key string) ([]byte, error) {
 	rsp, err := s.peer.Call(ctx, s.method(mGet), GetRequest{
