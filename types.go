@@ -188,30 +188,6 @@ func (r *ListResponse) Decode(data []byte) error {
 	return nil
 }
 
-// CASPutRequest is the encoding wrapper for the CASPut method.
-type CASPutRequest struct {
-	ID   int
-	Data []byte
-
-	// Encoding:
-	// [V] id [rest] data
-}
-
-// Encode converts p into a binary string for request data.
-func (p CASPutRequest) Encode() []byte {
-	return packet.Slice{packet.Vint30(p.ID), packet.Raw(p.Data)}.Encode(nil)
-}
-
-// Decode decodes data from binary format and replace the contents of
-func (p *CASPutRequest) Decode(data []byte) error {
-	var err error
-	p.ID, p.Data, err = parseIDAndData(data)
-	if err != nil {
-		return fmt.Errorf("invalid CAS put request: %w", err)
-	}
-	return nil
-}
-
 // KeyspaceRequest is the encoding wrapper for a Keyspace request.
 type KeyspaceRequest = IDKeyRequest
 
