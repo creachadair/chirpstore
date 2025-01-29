@@ -70,7 +70,7 @@ type DeleteRequest = IDKeyRequest
 // HasRequest is an encoding wrapper for the arguments of the Has method.
 type HasRequest struct {
 	ID   int
-	Keys [][]byte
+	Keys []string
 
 	// Encoding:
 	// [V] id |: [Vk] klen [k] key :|
@@ -78,7 +78,7 @@ type HasRequest struct {
 
 // Encode converts s into a binary string.
 func (s HasRequest) Encode() []byte {
-	return packet.Slice{packet.Vint30(s.ID), packet.MBytes(s.Keys)}.Encode(nil)
+	return packet.Slice{packet.Vint30(s.ID), packet.MBytes[string](s.Keys)}.Encode(nil)
 }
 
 // Decode parses data into the contents of s.
@@ -87,7 +87,7 @@ func (s *HasRequest) Decode(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid has request: %w", err)
 	}
-	if (*packet.MBytes)(&s.Keys).Decode(rest) < 0 {
+	if (*packet.MBytes[string])(&s.Keys).Decode(rest) < 0 {
 		return errors.New("invalid has request: malformed keys")
 	}
 	s.ID = id
@@ -173,14 +173,14 @@ type ListResponse struct {
 
 // Encode converts r into a binary string for response data.
 func (r ListResponse) Encode() []byte {
-	return packet.Slice{packet.Bytes(r.Next), packet.MBytes(r.Keys)}.Encode(nil)
+	return packet.Slice{packet.Bytes(r.Next), packet.MBytes[[]byte](r.Keys)}.Encode(nil)
 }
 
 // Decode data from binary format and replaces the contents of r.
 func (r *ListResponse) Decode(data []byte) error {
 	_, err := packet.Parse(data,
 		(*packet.Bytes)(&r.Next),
-		(*packet.MBytes)(&r.Keys),
+		(*packet.MBytes[[]byte])(&r.Keys),
 	)
 	if err != nil {
 		return fmt.Errorf("invalid list response: %w", err)

@@ -45,7 +45,7 @@ func TestTypes(t *testing.T) {
 	}))
 	t.Run("HasRequest", testRoundTrip(new(chirpstore.HasRequest), &chirpstore.HasRequest{
 		ID:   4,
-		Keys: keyBytes("apple", "", "pear", "plum", "cherry"),
+		Keys: []string{"apple", "", "pear", "plum", "cherry"},
 	}))
 	t.Run("GetRequest", testRoundTrip(new(chirpstore.GetRequest), &chirpstore.GetRequest{
 		ID:  5,

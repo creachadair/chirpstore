@@ -103,15 +103,10 @@ func (s KV) Has(ctx context.Context, keys ...string) (blob.KeySet, error) {
 	if len(keys) == 0 {
 		return nil, nil // no sense calling the peer in this case
 	}
-	sreq := HasRequest{
+	rsp, err := s.peer.Call(ctx, s.method(mHas), HasRequest{
 		ID:   s.spaceID,
-		Keys: make([][]byte, len(keys)),
-	}
-	for i, key := range keys {
-		sreq.Keys[i] = []byte(key)
-	}
-
-	rsp, err := s.peer.Call(ctx, s.method(mHas), sreq.Encode())
+		Keys: keys,
+	}.Encode())
 	if err != nil {
 		return nil, err
 	} else if len(rsp.Data) != len(keys) {
