@@ -65,8 +65,8 @@ class Client(object):
 
     def __read_packet(self):
         hdr = self._conn.read(8)
-        sig, ptype, plen = struct.unpack('>3sbI', hdr)
-        if sig != b'CP\x00':
+        sig, ptype, plen = struct.unpack('>2sHI', hdr)
+        if sig != b'\xc7\x00':
             raise ProtocolError("invalid packet header")
 
         payload = self._conn.read(plen)
@@ -95,10 +95,10 @@ class Client(object):
         self._reqid += 1
         return self._reqid, self.fmt_req.pack(self._reqid, len(method_id))+method_id+payload
 
-    fmt_pkt = struct.Struct('>3sbI')
+    fmt_pkt = struct.Struct('>2sHI')
 
     def __packet(self, ptype, payload):
-        return self.fmt_pkt.pack(b'CP\x00', ptype, len(payload))+payload
+        return self.fmt_pkt.pack(b'\xc7\x00', ptype, len(payload))+payload
 
     def __del__(self):
         self._conn.close()
