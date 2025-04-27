@@ -1,5 +1,5 @@
-github.com/creachadair/chirp v0.0.0-20250403160620-f3169756dd4e h1:roQUlTlbfsf7dG/z9Wum/BibTto+gAaDEcvv18vA4vw=
-github.com/creachadair/chirp v0.0.0-20250403160620-f3169756dd4e/go.mod h1:UUW+gESTqiNveVJlQ+YP629+dehdKIpZfp1dzGLNxzs=
+github.com/creachadair/chirp v0.0.0-20250412175921-5f9c12b58822 h1:pR8djGdm6ojzahrHllDZrE+aWmG9twmsAMcs3prOFhs=
+github.com/creachadair/chirp v0.0.0-20250412175921-5f9c12b58822/go.mod h1:UUW+gESTqiNveVJlQ+YP629+dehdKIpZfp1dzGLNxzs=
 github.com/creachadair/ffs v0.13.16 h1:1vv2K6NsjVS9B455RexvrYfc9cUtwQ9ES41Es+GPqOg=
 github.com/creachadair/ffs v0.13.16/go.mod h1:PX+Ye+Ure+2n1pJaLqpHRNaKODg/iJdGK3snhCf8fds=
 github.com/creachadair/mds v0.24.2 h1:J3EUS8nUP33t8XZ8N5SqNtOVQFHJ4ntz0MjesASbU3Y=
