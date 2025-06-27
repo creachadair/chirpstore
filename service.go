@@ -168,6 +168,11 @@ func (s *Service) Get(ctx context.Context, req *chirp.Request) ([]byte, error) {
 }
 
 // Has handles the corresponding method of [blob.KV].
+//
+// The response is a packed bit vector where 1 indicates the corresponding key
+// was present in the store. The ith key is mapped to the (i/8)th byte of the
+// response and the (i%8)th bit within that byte. Excess bits at the end of the
+// vector will always be zero.
 func (s *Service) Has(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	var sreq HasRequest
 	if err := sreq.Decode(req.Data); err != nil {
@@ -177,18 +182,14 @@ func (s *Service) Has(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	if kv == nil {
 		return invalidKeyspaceID(sreq.ID)
 	}
-	keys := make([]string, len(sreq.Keys))
-	for i, key := range sreq.Keys {
-		keys[i] = string(key)
-	}
-	data, err := kv.Has(ctx, keys...)
+	data, err := kv.Has(ctx, sreq.Keys...)
 	if err != nil {
 		return nil, filterErr(err)
 	}
-	srsp := make([]byte, len(keys))
-	for i, key := range keys {
+	srsp := make([]byte, (len(sreq.Keys)+7)/8)
+	for i, key := range sreq.Keys {
 		if data.Has(key) {
-			srsp[i] = 1
+			srsp[i/8] |= 1 << (i % 8)
 		}
 	}
 	return srsp, nil
