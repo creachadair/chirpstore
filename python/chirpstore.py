@@ -191,6 +191,13 @@ def dial(addr):
     s.connect((host, int(port)))
     return s
 
+def dial_unix(path):
+    """Connect a Unix-domain socket to the given path.
+    """
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM, 0)
+    s.connect(path)
+    return s
+
 def vlen(v: int) -> int:
     if v < (1<<6): return 1
     if v < (1<<14): return 2
