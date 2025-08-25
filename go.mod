@@ -6,7 +6,7 @@ toolchain go1.24.0
 
 require (
 	github.com/creachadair/chirp v0.1.0
-	github.com/creachadair/ffs v0.14.1
+	github.com/creachadair/ffs v0.14.3
 	github.com/google/go-cmp v0.7.0
 )
 
