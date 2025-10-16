@@ -145,13 +145,14 @@ func (s KV) Delete(ctx context.Context, key string) error {
 // List implements a method of [blob.KV].
 func (s KV) List(ctx context.Context, start string) iter.Seq2[string, error] {
 	return func(yield func(string, error) bool) {
-		next := start
+		count, next := 4, start
 		for {
 			// Fetch another batch of keys.
 			var rsp ListResponse
 			if lres, err := s.peer.Call(ctx, s.method(mList), ListRequest{
 				ID:    s.spaceID,
 				Start: []byte(next),
+				Count: count,
 			}.Encode()); err != nil {
 				yield("", err)
 				return
@@ -173,6 +174,9 @@ func (s KV) List(ctx context.Context, start string) iter.Seq2[string, error] {
 				return
 			}
 			next = string(rsp.Next)
+			if count < 256 {
+				count *= 2
+			}
 		}
 	}
 }
