@@ -58,9 +58,9 @@ func TestCAS(t *testing.T) {
 	ctx := context.Background()
 	cas := storetest.SubCAS(t, ctx, rs, "")
 
-	// Generate: https://go.dev/play/p/96wllQpFbRt
+	// Generate: https://go.dev/play/p/oXQGXRvang7
 	const input = "abcde\n"
-	const want = "171f7c7fa25081bd0e52d37990dd2d7624f986af4fc50714680c7f0e9df631d5"
+	const want = "dfd4f2a506b319beb82d9bcecf82234b3979bac1153f5fdf8a18bce2c6ac913e"
 
 	t.Run("CASPut", func(t *testing.T) {
 		key, err := cas.CASPut(ctx, []byte(input))
