@@ -108,7 +108,7 @@ func (s *HasRequest) Decode(data []byte) error {
 	s.ID = id
 	s.Keys = s.Keys[:0]
 	for sc.Len() != 0 {
-		key, err := sc.VString()
+		key, err := packet.VGet[string](sc)
 		if err != nil {
 			return fmt.Errorf("invalid has request: malformed key: %w", err)
 		}
@@ -150,7 +150,7 @@ func (p *PutRequest) Decode(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid put request: %w", err)
 	}
-	p.Key, err = s.VBytes()
+	p.Key, err = packet.VGet[[]byte](s)
 	if err != nil {
 		return fmt.Errorf("invalid put request: %w", err)
 	}
@@ -219,14 +219,14 @@ func (r ListResponse) Encode() []byte {
 // Decode data from binary format and replaces the contents of r.
 func (r *ListResponse) Decode(data []byte) error {
 	s := packet.NewScanner(data)
-	next, err := s.VBytes()
+	next, err := packet.VGet[[]byte](s)
 	if err != nil {
 		return fmt.Errorf("invalid list response: %w", err)
 	}
 	r.Next = next
 	r.Keys = r.Keys[:0]
 	for s.Len() != 0 {
-		key, err := s.VBytes()
+		key, err := packet.VGet[[]byte](s)
 		if err != nil {
 			return fmt.Errorf("invalid list response: %w", err)
 		}
