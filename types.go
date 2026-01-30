@@ -93,7 +93,7 @@ func (s HasRequest) Encode() []byte {
 	b.Grow(size)
 	b.Vint30(uint32(s.ID))
 	for _, key := range s.Keys {
-		b.VString(key)
+		packet.VAppend(&b, key)
 	}
 	return b.Bytes()
 }
@@ -133,7 +133,7 @@ func (p PutRequest) Encode() []byte {
 	var b packet.Builder
 	b.Vint30(uint32(p.ID))
 	b.Bool(p.Replace)
-	b.VBytes(p.Key)
+	packet.VAppend(&b, p.Key)
 	packet.Append(&b, p.Data)
 	return b.Bytes()
 }
@@ -209,9 +209,9 @@ func (r ListResponse) Encode() []byte {
 	}
 	var b packet.Builder
 	b.Grow(size)
-	b.VBytes(r.Next)
+	packet.VAppend(&b, r.Next)
 	for _, key := range r.Keys {
-		b.VBytes(key)
+		packet.VAppend(&b, key)
 	}
 	return b.Bytes()
 }
