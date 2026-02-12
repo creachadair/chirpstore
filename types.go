@@ -32,7 +32,7 @@ func (r IDKeyRequest) Encode() []byte {
 	var b packet.Builder
 	b.Grow(packet.Vint30(r.ID).Size() + len(r.Key))
 	b.Vint30(uint32(r.ID))
-	packet.Append(&b, r.Key)
+	b.Put(r.Key...)
 	return b.Bytes()
 }
 
@@ -87,13 +87,13 @@ type HasRequest struct {
 func (s HasRequest) Encode() []byte {
 	size := packet.Vint30(s.ID).Size()
 	for _, key := range s.Keys {
-		size += packet.VLen(key)
+		size += packet.VLen(len(key))
 	}
 	var b packet.Builder
 	b.Grow(size)
 	b.Vint30(uint32(s.ID))
 	for _, key := range s.Keys {
-		packet.VAppend(&b, key)
+		b.VPutString(key)
 	}
 	return b.Bytes()
 }
@@ -108,7 +108,7 @@ func (s *HasRequest) Decode(data []byte) error {
 	s.ID = id
 	s.Keys = s.Keys[:0]
 	for sc.Len() != 0 {
-		key, err := packet.VGet[string](sc)
+		key, err := sc.VGetString()
 		if err != nil {
 			return fmt.Errorf("invalid has request: malformed key: %w", err)
 		}
@@ -133,8 +133,8 @@ func (p PutRequest) Encode() []byte {
 	var b packet.Builder
 	b.Vint30(uint32(p.ID))
 	b.Bool(p.Replace)
-	packet.VAppend(&b, p.Key)
-	packet.Append(&b, p.Data)
+	b.VPut(p.Key)
+	b.Put(p.Data...)
 	return b.Bytes()
 }
 
@@ -150,7 +150,7 @@ func (p *PutRequest) Decode(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid put request: %w", err)
 	}
-	p.Key, err = packet.VGet[[]byte](s)
+	p.Key, err = s.VGet()
 	if err != nil {
 		return fmt.Errorf("invalid put request: %w", err)
 	}
@@ -173,7 +173,7 @@ func (r ListRequest) Encode() []byte {
 	var b packet.Builder
 	b.Vint30(uint32(r.ID))
 	b.Vint30(uint32(r.Count))
-	packet.Append(&b, r.Start)
+	b.Put(r.Start...)
 	return b.Bytes()
 }
 
@@ -203,15 +203,15 @@ type ListResponse struct {
 
 // Encode converts r into a binary string for response data.
 func (r ListResponse) Encode() []byte {
-	size := packet.VLen(r.Next)
+	size := packet.VLen(len(r.Next))
 	for _, key := range r.Keys {
-		size += packet.VLen(key)
+		size += packet.VLen(len(key))
 	}
 	var b packet.Builder
 	b.Grow(size)
-	packet.VAppend(&b, r.Next)
+	b.VPut(r.Next)
 	for _, key := range r.Keys {
-		packet.VAppend(&b, key)
+		b.VPut(key)
 	}
 	return b.Bytes()
 }
@@ -219,14 +219,14 @@ func (r ListResponse) Encode() []byte {
 // Decode data from binary format and replaces the contents of r.
 func (r *ListResponse) Decode(data []byte) error {
 	s := packet.NewScanner(data)
-	next, err := packet.VGet[[]byte](s)
+	next, err := s.VGet()
 	if err != nil {
 		return fmt.Errorf("invalid list response: %w", err)
 	}
 	r.Next = next
 	r.Keys = r.Keys[:0]
 	for s.Len() != 0 {
-		key, err := packet.VGet[[]byte](s)
+		key, err := s.VGet()
 		if err != nil {
 			return fmt.Errorf("invalid list response: %w", err)
 		}
