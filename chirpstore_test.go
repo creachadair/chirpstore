@@ -20,7 +20,7 @@ var _ blob.KV = chirpstore.KV{}
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
 
 func logPacket(t *testing.T, tag string) chirp.PacketLogger {
-	return func(pkt *chirp.Packet, dir chirp.PacketDir) {
+	return func(pkt chirp.Packet, dir chirp.PacketDir) {
 		t.Helper()
 		t.Logf("%s: [%s] %v", tag, dir, pkt)
 	}
