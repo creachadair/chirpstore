@@ -131,6 +131,7 @@ type PutRequest struct {
 // Encode converts p into a binary string for request data.
 func (p PutRequest) Encode() []byte {
 	var b packet.Builder
+	b.Grow(packet.Vint30(p.ID).Size() + 1 + packet.VLen(len(p.Key)+len(p.Data)))
 	b.Vint30(uint32(p.ID))
 	b.Bool(p.Replace)
 	b.VPut(p.Key)
@@ -171,6 +172,7 @@ type ListRequest struct {
 // Encode converts r into a binary string for request data.
 func (r ListRequest) Encode() []byte {
 	var b packet.Builder
+	b.Grow(packet.Vint30(r.ID).Size() + packet.Vint30(r.Count).Size() + len(r.Start))
 	b.Vint30(uint32(r.ID))
 	b.Vint30(uint32(r.Count))
 	b.Put(r.Start...)
