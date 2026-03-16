@@ -1,16 +1,16 @@
 module github.com/creachadair/chirpstore
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/creachadair/chirp v0.4.1
-	github.com/creachadair/ffs v0.17.4
+	github.com/creachadair/ffs v0.17.5
 	github.com/google/go-cmp v0.7.0
 )
 
 require (
-	github.com/creachadair/mds v0.26.0 // indirect
+	github.com/creachadair/mds v0.26.1 // indirect
 	github.com/creachadair/taskgroup v0.14.2 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 )
