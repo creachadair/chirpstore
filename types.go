@@ -108,11 +108,11 @@ func (s *HasRequest) Decode(data []byte) error {
 	s.ID = id
 	s.Keys = s.Keys[:0]
 	for sc.Len() != 0 {
-		key, err := sc.VGetString()
+		key, err := sc.VGet()
 		if err != nil {
 			return fmt.Errorf("invalid has request: malformed key: %w", err)
 		}
-		s.Keys = append(s.Keys, key)
+		s.Keys = append(s.Keys, string(key))
 	}
 	return nil
 }
