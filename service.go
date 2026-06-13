@@ -186,10 +186,10 @@ func (s *Service) Has(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	if err != nil {
 		return nil, filterErr(err)
 	}
-	srsp := make([]byte, (len(sreq.Keys)+7)/8)
+	srsp := MakeHasResponse(len(sreq.Keys))
 	for i, key := range sreq.Keys {
 		if data.Has(key) {
-			srsp[i/8] |= 1 << (i % 8)
+			srsp.Set(i)
 		}
 	}
 	return srsp, nil

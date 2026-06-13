@@ -109,13 +109,14 @@ func (s KV) Has(ctx context.Context, keys ...string) (blob.KeySet, error) {
 	}.Encode())
 	if err != nil {
 		return nil, err
-	} else if w := 8 * len(rsp.Data); w < len(keys) {
-		return nil, fmt.Errorf("has: got %d results, want %d", w, len(keys))
+	}
+	srsp := HasResponse(rsp.Data)
+	if srsp.Count() < len(keys) {
+		return nil, fmt.Errorf("has: got %d results, want %d", srsp.Count(), len(keys))
 	}
 	var out blob.KeySet
 	for i, key := range keys {
-		w := rsp.Data[i/8]
-		if w&(1<<(i%8)) != 0 {
+		if srsp.IsSet(i) {
 			out.Add(key)
 		}
 	}

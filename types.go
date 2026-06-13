@@ -117,6 +117,21 @@ func (s *HasRequest) Decode(data []byte) error {
 	return nil
 }
 
+// HasResponse is an encoding wrapper for the Has method response.
+type HasResponse []byte
+
+// MakeHasResponse constructs an empty [HasResponse] with enough space for count entries.
+func MakeHasResponse(count int) HasResponse { return make(HasResponse, (count+7)/8) }
+
+// IsSet reports whether the specified bit position of s is set.
+func (s HasResponse) IsSet(pos int) bool { return s[pos/8]&(1<<(pos%8)) != 0 }
+
+// Set sets the specified bit position of s to true.
+func (s HasResponse) Set(pos int) { s[pos/8] |= 1 << (pos % 8) }
+
+// Count reports the number of entries encoded by s.
+func (s HasResponse) Count() int { return 8 * len(s) }
+
 // PutRequest is an encoding wrapper for the arguments of the Put method.
 type PutRequest struct {
 	ID      int
