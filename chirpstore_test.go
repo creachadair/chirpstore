@@ -26,10 +26,8 @@ func logPacket(t *testing.T, tag string) chirp.PacketLogger {
 	}
 }
 
-func newTestService(t *testing.T, bs blob.Store) *chirp.Peer {
-	if bs == nil {
-		bs = memstore.New(nil)
-	}
+func newTestService(t *testing.T) *chirp.Peer {
+	bs := memstore.New(nil)
 	svc := chirpstore.NewService(bs, nil)
 
 	loc := peers.NewLocal()
@@ -46,13 +44,13 @@ func newTestService(t *testing.T, bs blob.Store) *chirp.Peer {
 }
 
 func TestStore(t *testing.T) {
-	peer := newTestService(t, nil)
+	peer := newTestService(t)
 	rs := chirpstore.NewStore(peer, nil)
 	storetest.Run(t, rs)
 }
 
 func TestCAS(t *testing.T) {
-	peer := newTestService(t, nil)
+	peer := newTestService(t)
 	rs := chirpstore.NewStore(peer, nil)
 
 	ctx := context.Background()
