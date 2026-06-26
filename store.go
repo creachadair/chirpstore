@@ -77,6 +77,9 @@ func (s chirpStub) withID(id int) chirpStub { s.id = id; return s }
 // Close implements part of the [blob.StoreCloser] interface.
 func (s Store) Close(context.Context) error { return s.DB.peer.Stop() }
 
+// Peer returns a handle to the [chirp.Peer] used by s.
+func (s Store) Peer() *chirp.Peer { return s.DB.peer }
+
 // KV implements the [blob.KV] interface by calling a Chirp v0 peer.
 type KV struct {
 	spaceID int
