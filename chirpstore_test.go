@@ -1,7 +1,6 @@
 package chirpstore_test
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"testing"
@@ -53,15 +52,14 @@ func TestCAS(t *testing.T) {
 	peer := newTestService(t)
 	rs := chirpstore.NewStore(peer, nil)
 
-	ctx := context.Background()
-	cas := storetest.SubCAS(t, ctx, rs, "")
+	cas := storetest.SubCAS(t, rs, "")
 
 	// Generate: https://go.dev/play/p/oXQGXRvang7
 	const input = "abcde\n"
 	const want = "dfd4f2a506b319beb82d9bcecf82234b3979bac1153f5fdf8a18bce2c6ac913e"
 
 	t.Run("CASPut", func(t *testing.T) {
-		key, err := cas.CASPut(ctx, []byte(input))
+		key, err := cas.CASPut(t.Context(), []byte(input))
 		if err != nil {
 			t.Errorf("PutCAS(%q) failed: %v", input, err)
 		} else if got := fmt.Sprintf("%x", key); got != want {
@@ -70,14 +68,14 @@ func TestCAS(t *testing.T) {
 	})
 
 	t.Run("CASKey", func(t *testing.T) {
-		key := cas.CASKey(ctx, []byte(input))
+		key := cas.CASKey(t.Context(), []byte(input))
 		if got := fmt.Sprintf("%x", key); got != want {
 			t.Errorf("CASKey(%q): got key %q, want %q", input, got, want)
 		}
 	})
 
 	t.Run("Len", func(t *testing.T) {
-		n, err := cas.Len(ctx)
+		n, err := cas.Len(t.Context())
 		if err != nil {
 			t.Errorf("Len failed: %v", err)
 		} else if n != 1 {
