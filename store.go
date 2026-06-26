@@ -20,6 +20,9 @@ type Store struct {
 
 // NewStore constructs a Store that delegates through the given peer.
 func NewStore(peer *chirp.Peer, opts *StoreOptions) Store {
+	if p := opts.packetLogger(); p != nil {
+		peer.LogPackets(p)
+	}
 	return Store{M: monitor.New(monitor.Config[chirpStub, KV]{
 		DB: chirpStub{pfx: opts.methodPrefix(), id: 0, peer: peer},
 		NewKV: func(ctx context.Context, db chirpStub, pfx dbkey.Prefix, name string) (KV, error) {
@@ -54,6 +57,9 @@ func NewStore(peer *chirp.Peer, opts *StoreOptions) Store {
 type StoreOptions struct {
 	// A prefix to prepend to all the method names exported by the service.
 	MethodPrefix string
+
+	// A packet logger to attach to the peer used by the store.
+	PacketLogger chirp.PacketLogger
 }
 
 func (o *StoreOptions) methodPrefix() string {
@@ -61,6 +67,13 @@ func (o *StoreOptions) methodPrefix() string {
 		return ""
 	}
 	return o.MethodPrefix
+}
+
+func (o *StoreOptions) packetLogger() chirp.PacketLogger {
+	if o != nil {
+		return o.PacketLogger
+	}
+	return nil
 }
 
 // chirpStub contains the metadata for a substore.
