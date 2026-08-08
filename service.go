@@ -2,6 +2,7 @@ package chirpstore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -150,6 +151,9 @@ func (s *Service) Sub(ctx context.Context, req *chirp.Request) ([]byte, error) {
 func (s *Service) Status(ctx context.Context, req *chirp.Request) ([]byte, error) {
 	// TODO(creachadair): Add some metrics about substore and keyspace usage.
 	mx := chirp.ContextPeer(ctx).Metrics()
+	if len(req.Data) != 0 {
+		return nil, errors.New("no parameters accepted")
+	}
 	return []byte(mx.String()), nil
 }
 

@@ -3,6 +3,7 @@ package chirpstore_test
 import (
 	"flag"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/creachadair/chirp"
@@ -80,6 +81,15 @@ func TestCAS(t *testing.T) {
 			t.Errorf("Len failed: %v", err)
 		} else if n != 1 {
 			t.Errorf("Len: got %d, want %d", n, 1)
+		}
+	})
+
+	t.Run("Status/NonEmpty", func(t *testing.T) {
+		rsp, err := peer.Call(t.Context(), "status", []byte("hello"))
+		if err == nil {
+			t.Errorf("Status: got %d bytes response, want error", len(rsp.Data))
+		} else if !strings.Contains(err.Error(), "no parameters accepted") {
+			t.Errorf("Status: got err=%v, want no parameters accepted", err)
 		}
 	})
 }
