@@ -8,6 +8,7 @@ package chirpstore
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/creachadair/chirp"
 	"github.com/creachadair/chirp/packet"
@@ -287,8 +288,7 @@ func filterErr(err error) error {
 }
 
 func unfilterErr(err error) error {
-	var ce *chirp.CallError
-	if errors.As(err, &ce) {
+	if ce, ok := errors.AsType[*chirp.CallError](err); ok {
 		key := string(ce.Data)
 
 		if ce.Code == codeKeyExists {
@@ -322,8 +322,8 @@ func packInt64(z int64) []byte {
 
 func unpackInt64(buf []byte) int64 {
 	var v uint64
-	for i := len(buf) - 1; i >= 0; i-- {
-		v = (v << 8) | uint64(buf[i])
+	for _, b := range slices.Backward(buf) {
+		v = (v << 8) | uint64(b)
 	}
 	return int64(v)
 }
