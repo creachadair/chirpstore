@@ -1,9 +1,9 @@
 module github.com/creachadair/chirpstore
 
-go 1.26.0
+go 1.27
 
 require (
-	github.com/creachadair/chirp v0.4.12
+	github.com/creachadair/chirp v0.4.13
 	github.com/creachadair/ffs v0.18.3
 	github.com/google/go-cmp v0.7.0
 )

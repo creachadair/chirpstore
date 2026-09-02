@@ -94,7 +94,7 @@ func (s HasRequest) Encode() []byte {
 	b.Grow(size)
 	b.Vint30(uint32(s.ID))
 	for _, key := range s.Keys {
-		b.VPutString(key)
+		b.VPut(key)
 	}
 	return b.Bytes()
 }
