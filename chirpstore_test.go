@@ -19,14 +19,14 @@ var _ blob.KV = chirpstore.KV{}
 
 var doDebug = flag.Bool("debug", false, "Enable debug logging")
 
-func logPacket(t *testing.T, tag string) chirp.PacketLogger {
+func logPacket(t testing.TB, tag string) chirp.PacketLogger {
 	return func(pkt chirp.Packet, dir chirp.PacketDir) {
 		t.Helper()
 		t.Logf("%s: [%s] %v", tag, dir, pkt)
 	}
 }
 
-func newTestService(t *testing.T) *chirp.Peer {
+func newTestService(t testing.TB) *chirp.Peer {
 	bs := memstore.New(nil)
 	svc := chirpstore.NewService(bs, nil)
 
@@ -92,4 +92,16 @@ func TestCAS(t *testing.T) {
 			t.Errorf("Status: got err=%v, want no parameters accepted", err)
 		}
 	})
+}
+
+func BenchmarkStore(b *testing.B) {
+	svc := newTestService(b)
+	rs := chirpstore.NewStore(svc, nil)
+
+	kv, err := rs.KV(b.Context(), "benchmark")
+	if err != nil {
+		b.Fatalf("KV: %v", err)
+	}
+	b.Log("Note: Benchmark exercises service throughput, not storage performance")
+	storetest.BenchmarkKV(b, kv)
 }
